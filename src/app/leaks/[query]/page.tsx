@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { InvestigationPanel } from "@/components/investigation-panel";
 import { SeverityBadge } from "@/components/severity-badge";
 import { products, searchEvents } from "@/lib/demo-data";
 import {
@@ -107,16 +108,22 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
         <div className="analysis-panel">
           <h2>Opportunity formula</h2>
           <p className="formula">
-            Searches × baseline conversion × average order value
+            Searches × max(0, baseline conversion - query conversion) ×
+            relevant AOV
           </p>
           <p className="formula-values">
             {formatNumber.format(leak.searches)} ×{" "}
-            {formatPercentage(leak.baselineConversionRate)} ×{" "}
-            {formatCurrency.format(leak.averageOrderValue)}
+            ({formatPercentage(leak.baselineConversionRate)} -{" "}
+            {formatPercentage(leak.conversionRate)}) ×{" "}
+            {formatCurrency.format(leak.relevantAverageOrderValue)}
           </p>
           <p className="panel-note">
-            This is an estimate based on simulated demand and catalog data. It
-            is not recovered or guaranteed revenue.
+            Relevant AOV source:{" "}
+            {leak.averageOrderValueSource === "storefront_results"
+              ? "average price of current in-stock storefront results."
+              : "fallback average price of all in-stock demo catalog products because the query returns no result."}
+            {" "}This is an opportunity estimate, not recovered or guaranteed
+            revenue.
           </p>
         </div>
       </section>
@@ -127,13 +134,18 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
           <strong>Detected</strong>
         </div>
         <div>
-          <span>Catalog evidence</span>
+          <span>Current storefront result</span>
           <strong>
-            {leak.matchedProductCount} matching in-stock{" "}
-            {leak.matchedProductCount === 1 ? "product" : "products"}
+            {leak.storefrontResultCount} in-stock{" "}
+            {leak.storefrontResultCount === 1 ? "product" : "products"}
           </strong>
         </div>
       </section>
+
+      <InvestigationPanel
+        query={leak.query}
+        agentConfigured={Boolean(process.env.OPENAI_API_KEY)}
+      />
     </main>
   );
 }

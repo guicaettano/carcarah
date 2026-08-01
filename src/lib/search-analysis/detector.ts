@@ -1,10 +1,11 @@
 import {
-  calculateAverageOrderValue,
   calculateBaselineConversionRate,
   calculateBaselineCtr,
   calculateEstimatedOpportunity,
+  calculateRelevantAverageOrderValue,
   calculateSearchMetrics,
 } from "./metrics";
+import { searchStorefront } from "../commerce-search";
 import type {
   AnalysisSummary,
   Product,
@@ -15,63 +16,13 @@ import type {
 
 const MIN_RELEVANT_SEARCHES = 50;
 
-function normalizeText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const ignoredTokens = new Set([
-  "a",
-  "as",
-  "com",
-  "da",
-  "de",
-  "do",
-  "e",
-  "em",
-  "para",
-]);
-
-function tokenize(value: string): Set<string> {
-  return new Set(
-    normalizeText(value)
-      .split(" ")
-      .filter((token) => token.length > 1 && !ignoredTokens.has(token)),
-  );
-}
-
-export function countMatchingProducts(query: string, products: Product[]): number {
-  const queryTokens = tokenize(query);
-
-  return products.filter((product) => {
-    if (product.stock <= 0) return false;
-
-    const searchableProduct = [
-      product.name,
-      product.description,
-      product.category,
-      ...product.tags,
-    ].join(" ");
-    const productTokens = tokenize(searchableProduct);
-    const overlap = [...queryTokens].filter((token) => productTokens.has(token));
-    const requiredOverlap = queryTokens.size <= 2 ? 1 : 2;
-
-    return overlap.length >= requiredOverlap;
-  }).length;
-}
-
 function calculateSeverityScore(
   event: SearchEvent,
   ctr: number,
   conversionRate: number,
   baselineCtr: number,
   baselineConversionRate: number,
-  matchedProductCount: number,
+  storefrontResultCount: number,
 ): number {
   let score = 0;
 
@@ -79,7 +30,7 @@ function calculateSeverityScore(
   score += ctr <= baselineCtr * 0.25 ? 2 : ctr <= baselineCtr * 0.55 ? 1 : 0;
   score += conversionRate === 0 ? 3 : conversionRate <= baselineConversionRate * 0.35 ? 2 : 0;
   score += event.purchases === 0 ? 1 : 0;
-  score += matchedProductCount > 0 ? 1 : 0;
+  score += storefrontResultCount === 0 ? 1 : 0;
 
   return score;
 }
@@ -94,7 +45,7 @@ function buildReason(
   event: SearchEvent,
   ctr: number,
   baselineCtr: number,
-  matchedProductCount: number,
+  storefrontResultCount: number,
 ): string {
   const findings = [
     `${event.searches} searches produced ${event.purchases} purchases`,
@@ -104,11 +55,11 @@ function buildReason(
     findings.push("CTR is materially below the healthy-query baseline");
   }
 
-  if (matchedProductCount > 0) {
-    findings.push(
-      `${matchedProductCount} in-stock catalog ${matchedProductCount === 1 ? "product matches" : "products match"} the query terms`,
-    );
-  }
+  findings.push(
+    storefrontResultCount === 0
+      ? "The current storefront search returns no results"
+      : `The current storefront search returns ${storefrontResultCount} ${storefrontResultCount === 1 ? "result" : "results"}`,
+  );
 
   return `${findings.join(". ")}.`;
 }
@@ -119,11 +70,17 @@ export function detectRevenueLeaks(
 ): RevenueLeak[] {
   const baselineConversionRate = calculateBaselineConversionRate(searchEvents);
   const baselineCtr = calculateBaselineCtr(searchEvents);
-  const averageOrderValue = calculateAverageOrderValue(products);
 
   return searchEvents
     .flatMap((event): RevenueLeak[] => {
-      const metrics = calculateSearchMetrics(event, averageOrderValue);
+      const relevantAverageOrderValue = calculateRelevantAverageOrderValue(
+        event.query,
+        products,
+      );
+      const metrics = calculateSearchMetrics(
+        event,
+        relevantAverageOrderValue.value,
+      );
       const hasRelevantVolume = event.searches >= MIN_RELEVANT_SEARCHES;
       const hasConversionGap =
         metrics.conversionRate < baselineConversionRate * 0.45;
@@ -135,14 +92,17 @@ export function detectRevenueLeaks(
 
       if (!isLeak) return [];
 
-      const matchedProductCount = countMatchingProducts(event.query, products);
+      const storefrontResultCount = searchStorefront(
+        event.query,
+        products,
+      ).total;
       const score = calculateSeverityScore(
         event,
         metrics.ctr,
         metrics.conversionRate,
         baselineCtr,
         baselineConversionRate,
-        matchedProductCount,
+        storefrontResultCount,
       );
 
       return [
@@ -158,18 +118,20 @@ export function detectRevenueLeaks(
           conversionRate: metrics.conversionRate,
           baselineCtr,
           baselineConversionRate,
-          averageOrderValue,
+          relevantAverageOrderValue: relevantAverageOrderValue.value,
+          averageOrderValueSource: relevantAverageOrderValue.source,
           estimatedMonthlyOpportunity: calculateEstimatedOpportunity(
             event.searches,
             baselineConversionRate,
-            averageOrderValue,
+            metrics.conversionRate,
+            relevantAverageOrderValue.value,
           ),
-          matchedProductCount,
+          storefrontResultCount,
           reason: buildReason(
             event,
             metrics.ctr,
             baselineCtr,
-            matchedProductCount,
+            storefrontResultCount,
           ),
           status: "detected",
         },

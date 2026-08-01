@@ -6,16 +6,16 @@
     "category": "Moletons",
     "price": 199,
     "stock": 23,
-    "tags": ["hoodie", "preto", "masculino", "capuz", "canguru"]
+    "tags": ["hoodie", "preto", "masculino", "capuz"]
   },
   {
     "id": "prod_002",
     "name": "Moletom com Capuz Preto",
-    "description": "Modelo unissex com bolso canguru e punhos canelados.",
+    "description": "Modelo unissex com bolso frontal e punhos canelados.",
     "category": "Moletons",
     "price": 179,
     "stock": 31,
-    "tags": ["moletom", "preto", "unissex", "capuz", "bolso canguru"]
+    "tags": ["moletom", "preto", "unissex", "capuz"]
   },
   {
     "id": "prod_003",
