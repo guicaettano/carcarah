@@ -23,6 +23,16 @@ export interface SearchMetrics {
   estimatedRevenue: number;
 }
 
+export type AverageOrderValueSource =
+  | "storefront_results"
+  | "catalog_fallback";
+
+export interface AverageOrderValueEstimate {
+  value: number;
+  source: AverageOrderValueSource;
+  productCount: number;
+}
+
 export type RevenueLeakSeverity = "high" | "medium" | "low";
 
 export interface RevenueLeak {
@@ -37,9 +47,10 @@ export interface RevenueLeak {
   conversionRate: number;
   baselineCtr: number;
   baselineConversionRate: number;
-  averageOrderValue: number;
+  relevantAverageOrderValue: number;
+  averageOrderValueSource: AverageOrderValueSource;
   estimatedMonthlyOpportunity: number;
-  matchedProductCount: number;
+  storefrontResultCount: number;
   reason: string;
   status: "detected";
 }

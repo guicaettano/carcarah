@@ -1,4 +1,10 @@
-import type { Product, SearchEvent, SearchMetrics } from "./types";
+import { searchStorefront } from "../commerce-search";
+import type {
+  AverageOrderValueEstimate,
+  Product,
+  SearchEvent,
+  SearchMetrics,
+} from "./types";
 
 export function calculateRate(numerator: number, denominator: number): number {
   if (denominator <= 0 || numerator <= 0) return 0;
@@ -28,6 +34,31 @@ export function calculateAverageOrderValue(products: Product[]): number {
     availableProducts.reduce((total, product) => total + product.price, 0) /
     availableProducts.length
   );
+}
+
+export function calculateRelevantAverageOrderValue(
+  query: string,
+  products: Product[],
+): AverageOrderValueEstimate {
+  const storefrontResults = searchStorefront(query, products).results;
+
+  if (storefrontResults.length > 0) {
+    return {
+      value: calculateAverageOrderValue(storefrontResults),
+      source: "storefront_results",
+      productCount: storefrontResults.length,
+    };
+  }
+
+  const availableProducts = products.filter(
+    (product) => product.stock > 0 && product.price > 0,
+  );
+
+  return {
+    value: calculateAverageOrderValue(availableProducts),
+    source: "catalog_fallback",
+    productCount: availableProducts.length,
+  };
 }
 
 function getHealthyReferenceEvents(events: SearchEvent[]): SearchEvent[] {
@@ -76,18 +107,24 @@ export function calculateEstimatedRevenue(
 }
 
 /**
- * Demo estimate: searches x baseline conversion rate x average order value.
+ * Incremental demo estimate:
+ * searches x max(0, baseline conversion - current conversion) x relevant AOV.
  * This is an opportunity estimate, not recovered or guaranteed revenue.
  */
 export function calculateEstimatedOpportunity(
   searches: number,
   baselineConversionRate: number,
-  averageOrderValue: number,
+  currentConversionRate: number,
+  relevantAverageOrderValue: number,
 ): number {
   return (
     Math.max(0, searches) *
-    Math.max(0, baselineConversionRate) *
-    Math.max(0, averageOrderValue)
+    Math.max(
+      0,
+      Math.max(0, baselineConversionRate) -
+        Math.max(0, currentConversionRate),
+    ) *
+    Math.max(0, relevantAverageOrderValue)
   );
 }
 

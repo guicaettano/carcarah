@@ -26,20 +26,27 @@ describe("search analysis metrics", () => {
   });
 
   it("never returns a negative estimated opportunity", () => {
-    expect(calculateEstimatedOpportunity(-100, 0.05, 200)).toBe(0);
-    expect(calculateEstimatedOpportunity(100, -0.05, 200)).toBe(0);
-    expect(calculateEstimatedOpportunity(100, 0.05, -200)).toBe(0);
+    expect(calculateEstimatedOpportunity(-100, 0.05, 0, 200)).toBe(0);
+    expect(calculateEstimatedOpportunity(100, -0.05, 0, 200)).toBe(0);
+    expect(calculateEstimatedOpportunity(100, 0.05, 0, -200)).toBe(0);
+    expect(calculateEstimatedOpportunity(100, 0.05, 0.08, 200)).toBe(0);
+  });
+
+  it("calculates incremental opportunity from the conversion gap", () => {
+    expect(
+      calculateEstimatedOpportunity(100, 0.06, 0.02, 200),
+    ).toBeCloseTo(800);
   });
 });
 
 describe("revenue leak detector", () => {
-  it("does not mark a healthy query as high severity", () => {
+  it("does not include a healthy query in revenue leaks", () => {
     const leaks = detectRevenueLeaks(searchEvents, products);
-    const healthyQuery = leaks.find(
+    const includesHealthyQuery = leaks.some(
       (leak) => leak.query === "camiseta branca masculina",
     );
 
-    expect(healthyQuery?.severity).not.toBe("high");
+    expect(includesHealthyQuery).toBe(false);
   });
 
   it("detects a high-volume query with zero conversions", () => {
