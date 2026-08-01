@@ -1,0 +1,254 @@
+[
+  {
+    "id": "prod_001",
+    "name": "Moletom Hoodie Preto Masculino",
+    "description": "Moletom de algodão encorpado com capuz, bolso frontal e acabamento macio.",
+    "category": "Moletons",
+    "price": 199,
+    "stock": 23,
+    "tags": ["hoodie", "preto", "masculino", "capuz", "canguru"]
+  },
+  {
+    "id": "prod_002",
+    "name": "Moletom com Capuz Preto",
+    "description": "Modelo unissex com bolso canguru e punhos canelados.",
+    "category": "Moletons",
+    "price": 179,
+    "stock": 31,
+    "tags": ["moletom", "preto", "unissex", "capuz", "bolso canguru"]
+  },
+  {
+    "id": "prod_003",
+    "name": "Hoodie Oversized Preto",
+    "description": "Hoodie amplo em moletom premium com interior felpado.",
+    "category": "Moletons",
+    "price": 229,
+    "stock": 17,
+    "tags": ["hoodie", "oversized", "preto", "moletom", "capuz"]
+  },
+  {
+    "id": "prod_004",
+    "name": "Moletom Careca Cinza Mescla",
+    "description": "Blusão sem capuz em algodão mesclado de gramatura média.",
+    "category": "Moletons",
+    "price": 159,
+    "stock": 28,
+    "tags": ["moletom", "careca", "cinza", "blusão", "unissex"]
+  },
+  {
+    "id": "prod_005",
+    "name": "Camiseta Básica Branca Masculina",
+    "description": "Camiseta reta em algodão penteado com gola reforçada.",
+    "category": "Camisetas",
+    "price": 69,
+    "stock": 64,
+    "tags": ["camiseta", "branca", "masculina", "básica", "algodão"]
+  },
+  {
+    "id": "prod_006",
+    "name": "Camiseta Essential Preta Feminina",
+    "description": "Camiseta de modelagem ajustada em malha leve.",
+    "category": "Camisetas",
+    "price": 65,
+    "stock": 42,
+    "tags": ["camiseta", "preta", "feminina", "básica"]
+  },
+  {
+    "id": "prod_007",
+    "name": "Camiseta Oversized Off White",
+    "description": "Camiseta ampla em algodão pesado com toque lavado.",
+    "category": "Camisetas",
+    "price": 99,
+    "stock": 26,
+    "tags": ["camiseta", "oversized", "off white", "unissex"]
+  },
+  {
+    "id": "prod_008",
+    "name": "Camiseta Listrada Azul e Branca",
+    "description": "Camiseta de algodão com listras finas e caimento regular.",
+    "category": "Camisetas",
+    "price": 89,
+    "stock": 20,
+    "tags": ["camiseta", "listrada", "azul", "branca"]
+  },
+  {
+    "id": "prod_009",
+    "name": "Calça Jeans Reta Masculina Azul Escuro",
+    "description": "Jeans de corte reto com lavagem escura e elastano.",
+    "category": "Calças",
+    "price": 219,
+    "stock": 35,
+    "tags": ["calça", "jeans", "masculina", "reta", "azul"]
+  },
+  {
+    "id": "prod_010",
+    "name": "Calça Jeans Mom Feminina Clara",
+    "description": "Jeans de cintura alta com modelagem mom e lavagem clara.",
+    "category": "Calças",
+    "price": 239,
+    "stock": 18,
+    "tags": ["calça", "jeans", "feminina", "mom", "cintura alta"]
+  },
+  {
+    "id": "prod_011",
+    "name": "Calça Cargo Verde Oliva",
+    "description": "Calça utilitária em sarja com bolsos laterais e ajuste na barra.",
+    "category": "Calças",
+    "price": 249,
+    "stock": 14,
+    "tags": ["calça", "cargo", "verde", "oliva", "utilitária"]
+  },
+  {
+    "id": "prod_012",
+    "name": "Calça Alfaiataria Preta Feminina",
+    "description": "Calça de cintura alta com pregas e caimento fluido.",
+    "category": "Calças",
+    "price": 259,
+    "stock": 22,
+    "tags": ["calça", "alfaiataria", "preta", "feminina", "social"]
+  },
+  {
+    "id": "prod_013",
+    "name": "Jaqueta Jeans Oversized Azul",
+    "description": "Jaqueta ampla em denim rígido com bolsos frontais.",
+    "category": "Jaquetas",
+    "price": 329,
+    "stock": 12,
+    "tags": ["jaqueta", "jeans", "oversized", "azul", "denim"]
+  },
+  {
+    "id": "prod_014",
+    "name": "Jaqueta Corta-Vento Preta",
+    "description": "Jaqueta leve resistente à água com capuz ajustável.",
+    "category": "Jaquetas",
+    "price": 289,
+    "stock": 19,
+    "tags": ["jaqueta", "corta vento", "preta", "impermeável", "capuz"]
+  },
+  {
+    "id": "prod_015",
+    "name": "Jaqueta Puffer Bege Unissex",
+    "description": "Jaqueta acolchoada leve com gola alta e bolsos internos.",
+    "category": "Jaquetas",
+    "price": 399,
+    "stock": 9,
+    "tags": ["jaqueta", "puffer", "bege", "unissex", "inverno"]
+  },
+  {
+    "id": "prod_016",
+    "name": "Vestido Midi Preto Canelado",
+    "description": "Vestido midi ajustado em malha canelada com fenda lateral.",
+    "category": "Vestidos",
+    "price": 189,
+    "stock": 24,
+    "tags": ["vestido", "midi", "preto", "canelado", "feminino"]
+  },
+  {
+    "id": "prod_017",
+    "name": "Vestido Floral Curto Azul",
+    "description": "Vestido leve com estampa floral, mangas curtas e decote quadrado.",
+    "category": "Vestidos",
+    "price": 209,
+    "stock": 15,
+    "tags": ["vestido", "floral", "curto", "azul", "verão"]
+  },
+  {
+    "id": "prod_018",
+    "name": "Saia Midi Plissada Preta",
+    "description": "Saia midi de tecido leve com pregas permanentes.",
+    "category": "Saias",
+    "price": 179,
+    "stock": 16,
+    "tags": ["saia", "midi", "plissada", "preta"]
+  },
+  {
+    "id": "prod_019",
+    "name": "Short Jeans Cintura Alta",
+    "description": "Short em denim médio com barra desfiada e cintura alta.",
+    "category": "Shorts",
+    "price": 159,
+    "stock": 29,
+    "tags": ["short", "jeans", "cintura alta", "feminino", "denim"]
+  },
+  {
+    "id": "prod_020",
+    "name": "Camisa Linho Branca Masculina",
+    "description": "Camisa leve de linho misto com mangas longas.",
+    "category": "Camisas",
+    "price": 229,
+    "stock": 21,
+    "tags": ["camisa", "linho", "branca", "masculina", "social"]
+  },
+  {
+    "id": "prod_021",
+    "name": "Camisa Oxford Azul Clara",
+    "description": "Camisa masculina de algodão Oxford com modelagem regular.",
+    "category": "Camisas",
+    "price": 199,
+    "stock": 27,
+    "tags": ["camisa", "oxford", "azul", "masculina", "algodão"]
+  },
+  {
+    "id": "prod_022",
+    "name": "Blazer Alfaiataria Preto Oversized",
+    "description": "Blazer estruturado de corte amplo com fechamento frontal.",
+    "category": "Blazers",
+    "price": 379,
+    "stock": 11,
+    "tags": ["blazer", "alfaiataria", "preto", "oversized", "feminino"]
+  },
+  {
+    "id": "prod_023",
+    "name": "Tênis Casual Branco Minimal",
+    "description": "Tênis branco de perfil baixo com cabedal sintético macio.",
+    "category": "Calçados",
+    "price": 299,
+    "stock": 38,
+    "tags": ["tênis", "casual", "branco", "minimalista", "unissex"]
+  },
+  {
+    "id": "prod_024",
+    "name": "Bota Chelsea Preta em Couro",
+    "description": "Bota de couro com elástico lateral e solado tratorado leve.",
+    "category": "Calçados",
+    "price": 449,
+    "stock": 13,
+    "tags": ["bota", "chelsea", "preta", "couro", "unissex"]
+  },
+  {
+    "id": "prod_025",
+    "name": "Bolsa Tiracolo Preta Compacta",
+    "description": "Bolsa compacta com alça regulável e divisórias internas.",
+    "category": "Acessórios",
+    "price": 189,
+    "stock": 33,
+    "tags": ["bolsa", "tiracolo", "preta", "compacta", "feminina"]
+  },
+  {
+    "id": "prod_026",
+    "name": "Boné Dad Hat Bege",
+    "description": "Boné de sarja com aba curva e regulagem traseira.",
+    "category": "Acessórios",
+    "price": 79,
+    "stock": 45,
+    "tags": ["boné", "dad hat", "bege", "unissex"]
+  },
+  {
+    "id": "prod_027",
+    "name": "Cinto Couro Marrom Clássico",
+    "description": "Cinto em couro legítimo com fivela metálica escovada.",
+    "category": "Acessórios",
+    "price": 129,
+    "stock": 32,
+    "tags": ["cinto", "couro", "marrom", "clássico"]
+  },
+  {
+    "id": "prod_028",
+    "name": "Top Esportivo Preto Média Sustentação",
+    "description": "Top esportivo de secagem rápida com alças largas.",
+    "category": "Esportivo",
+    "price": 119,
+    "stock": 36,
+    "tags": ["top", "esportivo", "preto", "fitness", "academia"]
+  }
+]
