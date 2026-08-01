@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { WRITE_TOOLS } from "../tools/write-tools";
+import { INVESTIGATION_WRITE_TOOLS } from "../tools/write-tools";
 import type { InvestigationRuntimeState } from "../types";
 import { validateAndGroundInvestigationResult } from "../validation";
 
@@ -33,6 +33,7 @@ describe("investigation result guardrails", () => {
         sourceTerm: null,
         targetTerms: null,
       },
+      actionProposal: null,
       confidence: 0.5,
       risk: "low",
     };
@@ -61,6 +62,16 @@ describe("investigation result guardrails", () => {
         sourceTerm: "casaco",
         targetTerms: ["hoodie preto"],
       },
+      actionProposal: {
+        type: "synonym_rule",
+        source: "casaco",
+        targets: ["hoodie"],
+        scope: "demo_storefront",
+        confidence: 0.9,
+        risk: "low",
+        reversible: true,
+        rationale: "A narrow vocabulary bridge is supported by inspected products.",
+      },
       confidence: 0.9,
       risk: "low",
     };
@@ -82,6 +93,6 @@ describe("investigation result guardrails", () => {
   });
 
   it("does not expose write tools in the investigation milestone", () => {
-    expect(Object.keys(WRITE_TOOLS)).toEqual([]);
+    expect(Object.keys(INVESTIGATION_WRITE_TOOLS)).toEqual([]);
   });
 });

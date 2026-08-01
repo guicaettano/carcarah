@@ -1,5 +1,6 @@
 import { normalizeSearchText } from "../commerce-search";
 import { products } from "../demo-data";
+import { groundSearchActionProposal } from "../search-actions/proposal";
 import { investigationResultSchema } from "./schema";
 import type {
   InvestigationResult,
@@ -85,6 +86,23 @@ export function validateAndGroundInvestigationResult(
     throw new Error("A boost recommendation requires inspected products.");
   }
 
+  if (action === "create_synonym" && !parsed.actionProposal) {
+    throw new Error("A synonym recommendation requires an executable proposal.");
+  }
+  if (action !== "create_synonym" && parsed.actionProposal) {
+    throw new Error(
+      "Only a grounded synonym recommendation can produce a search action proposal.",
+    );
+  }
+
+  const actionProposal = parsed.actionProposal
+    ? groundSearchActionProposal(parsed.actionProposal, {
+        query,
+        supportedTerms: state.searchedTerms,
+        supportedProductIds: state.inspectedProductIds,
+      })
+    : null;
+
   const evidence = state.trace.map((event) => ({
     type: evidenceTypeByTool[event.tool],
     description: event.summary,
@@ -95,5 +113,6 @@ export function validateAndGroundInvestigationResult(
     query,
     evidence,
     relatedProducts,
+    actionProposal,
   });
 }

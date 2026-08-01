@@ -1,6 +1,10 @@
 import { products as demoProducts } from "../demo-data";
 import type { Product } from "../search-analysis/types";
-import type { CatalogSearchMatch, StorefrontSearchResult } from "./types";
+import type {
+  CatalogSearchMatch,
+  SearchConfiguration,
+  StorefrontSearchResult,
+} from "./types";
 
 const STOP_WORDS = new Set([
   "a",
@@ -53,6 +57,73 @@ function matchesAll(tokens: string[], productTokens: Set<string>): boolean {
   return tokens.length > 0 && tokens.every((token) => productTokens.has(token));
 }
 
+function containsTokenSequence(tokens: string[], sequence: string[]): number {
+  if (sequence.length === 0 || sequence.length > tokens.length) return -1;
+
+  for (let index = 0; index <= tokens.length - sequence.length; index += 1) {
+    if (sequence.every((token, offset) => tokens[index + offset] === token)) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function replaceTokenSequence(
+  tokens: string[],
+  source: string[],
+  target: string[],
+): string[] | undefined {
+  const start = containsTokenSequence(tokens, source);
+  if (start < 0) return undefined;
+
+  return [
+    ...tokens.slice(0, start),
+    ...target,
+    ...tokens.slice(start + source.length),
+  ];
+}
+
+function uniqueTokens(tokens: string[]): string[] {
+  return [...new Set(tokens)];
+}
+
+function buildSearchVariants(
+  query: string,
+  config?: SearchConfiguration,
+): string[][] {
+  const originalTokens = tokenizeSearchText(query);
+  const variants = new Map<string, string[]>();
+  const addVariant = (tokens: string[]) => {
+    const unique = uniqueTokens(tokens);
+    if (unique.length > 0) variants.set(unique.join(" "), unique);
+  };
+
+  addVariant(originalTokens);
+  if (!config) return [...variants.values()];
+
+  for (const rule of config.synonymRules) {
+    const sourceTokens = tokenizeSearchText(rule.source);
+    for (const target of rule.targets) {
+      const rewritten = replaceTokenSequence(
+        originalTokens,
+        sourceTokens,
+        tokenizeSearchText(target),
+      );
+      if (rewritten) addVariant(rewritten);
+    }
+  }
+
+  for (const rule of config.queryRewriteRules) {
+    if (normalizeSearchText(rule.source) !== normalizeSearchText(query)) continue;
+    for (const target of rule.targets) {
+      addVariant(tokenizeSearchText(target));
+    }
+  }
+
+  return [...variants.values()];
+}
+
 /**
  * Simulates the store's current lexical search. Every meaningful query token
  * must exist in the indexed product metadata, so vocabulary mismatches remain
@@ -61,22 +132,37 @@ function matchesAll(tokens: string[], productTokens: Set<string>): boolean {
 export function searchStorefront(
   query: string,
   catalog: Product[] = demoProducts,
+  config?: SearchConfiguration,
 ): StorefrontSearchResult {
-  const queryTokens = tokenizeSearchText(query);
+  const queryVariants = buildSearchVariants(query, config);
 
   const results = catalog
     .filter((product) => product.stock > 0)
-    .filter((product) => matchesAll(queryTokens, productTokenSet(product)))
+    .filter((product) => {
+      const productTokens = productTokenSet(product);
+      return queryVariants.some((tokens) => matchesAll(tokens, productTokens));
+    })
     .sort((left, right) => {
       const leftTitle = titleTokenSet(left);
       const rightTitle = titleTokenSet(right);
-      const leftScore = queryTokens.filter((token) => leftTitle.has(token)).length;
-      const rightScore = queryTokens.filter((token) => rightTitle.has(token)).length;
+      const score = (titleTokens: Set<string>) =>
+        Math.max(
+          ...queryVariants.map(
+            (tokens) => tokens.filter((token) => titleTokens.has(token)).length,
+          ),
+        );
+      const leftScore = score(leftTitle);
+      const rightScore = score(rightTitle);
 
       return rightScore - leftScore || left.name.localeCompare(right.name);
     });
 
-  return { query, total: results.length, results };
+  return {
+    query,
+    total: results.length,
+    results,
+    executedQueries: queryVariants.map((tokens) => tokens.join(" ")),
+  };
 }
 
 /**
@@ -127,4 +213,10 @@ export function getProductById(
   return catalog.find((product) => product.id === productId);
 }
 
-export type { CatalogSearchMatch, StorefrontSearchResult } from "./types";
+export type {
+  CatalogSearchMatch,
+  QueryRewriteRule,
+  SearchConfiguration,
+  StorefrontSearchResult,
+  SynonymRule,
+} from "./types";

@@ -1,5 +1,5 @@
 /**
- * Reserved boundary for the future Act milestone.
- * No write capability is exported or passed to the model in this milestone.
+ * Investigation remains read-only. Act write tools live in search-actions and
+ * are invoked only after an explicit human approval request.
  */
-export const WRITE_TOOLS = Object.freeze({});
+export const INVESTIGATION_WRITE_TOOLS = Object.freeze({});

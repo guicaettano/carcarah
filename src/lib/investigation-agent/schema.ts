@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { searchActionProposalSchema } from "../search-actions/schema";
 
 export const investigationInputSchema = z
   .object({
@@ -54,6 +55,7 @@ export const investigationResultSchema = z
         targetTerms: z.array(z.string().min(1)).max(8).nullable(),
       })
       .strict(),
+    actionProposal: searchActionProposalSchema.nullable(),
     confidence: z.number().min(0).max(1),
     risk: z.enum(["low", "medium", "high"]),
   })
