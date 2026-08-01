@@ -2,89 +2,99 @@
 
 Autonomous Search Revenue Recovery Agent.
 
-## Problem
+## Current milestone
 
-E-commerce stores lose revenue when high-intent searches return irrelevant results, poorly ranked products, or no useful result. The catalog may already contain a suitable product, but shoppers still fail to find it.
+Carcarah now demonstrates this controlled loop:
 
-## Vision and current milestone
+**Observe → Detect → Investigate → Act → Validate**
 
-Carcarah is designed around this loop:
+The detector and financial metrics remain deterministic. An OpenAI tool-calling agent performs semantic investigation with read-only tools. A search change is proposed separately, requires explicit human approval, runs only in an ephemeral demo sandbox, and is automatically validated before it is presented as successful.
 
-**Observe → Detect → Investigate → Act → Validate → Measure**
-
-The current milestone implements **Observe + Detect + Investigate**. Detection is deterministic. Investigation uses a real tool-calling agent to inspect one detected leak, test its own search-term hypotheses, ground related products in catalog data, and recommend a next action.
-
-The agent is intentionally read-only. It cannot create synonyms, boost products, or change storefront configuration. Those capabilities belong to a future Act milestone.
+No catalog, production search engine, analytics source, or commerce platform is modified.
 
 ## Demo behavior
 
-The demo contains 28 fictional fashion products and 22 aggregated search queries. Its primary case is `moletom canguru preto`: the query has 187 searches, 2 clicks, no purchases, and the deterministic storefront simulator returns no products. The catalog does contain relevant products under different vocabulary, but no product metadata or code contains a planted mapping from that query to those products.
+The primary simulated case is `moletom canguru preto`:
+
+1. The original deterministic storefront returns no products.
+2. Carcarah investigates the leak and tests catalog search hypotheses.
+3. The investigation may produce a minimal, reversible `SearchActionProposal` supported by inspected products.
+4. A human clicks **Approve & apply in demo sandbox**.
+5. The server verifies the signed proposal, applies it through the Act write tool, reruns the original query, and checks related healthy queries for regressions.
+6. The UI displays the measured before/after result and allows the sandbox rule to be reverted.
+
+The relationship between shopper vocabulary and catalog vocabulary is not stored in product metadata, a synonym table, the prompt, or production code. The model must infer a hypothesis during each real investigation.
 
 All catalog, search, and GMV data is simulated.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    A[Aggregated search events] --> B[Deterministic leak detector]
-    P[Product catalog] --> B
+flowchart TD
+    E[Aggregated search events] --> D[Deterministic leak detector]
+    P[Simulated product catalog] --> D
     P --> S[Deterministic storefront simulator]
-    B --> D[Leak detail UI]
-    D -->|POST detected query| API[Investigation API]
-    API --> G[Read-only investigation agent]
-    G --> L[getLeakContext]
-    G --> S
-    G --> C[searchCatalog]
-    G --> R[getProductDetails]
-    L --> V[Server-side grounding and validation]
-    S --> V
-    C --> V
-    R --> V
-    V --> D
-    W[Write tools: none] -. explicit boundary .-> G
+    D --> I[Read-only investigation agent]
+    I --> RT[Read tools]
+    RT --> G[Grounded InvestigationResult]
+    G --> AP[Signed SearchActionProposal]
+    AP --> H{Human approval}
+    H -->|Not approved| STOP[No change]
+    H -->|Approved| R[Resolve API]
+    R --> W[applySearchRule write tool]
+    W --> C[Ephemeral SearchConfiguration]
+    C --> V[validateSearchChange]
+    V --> BA[Measured before and after]
+    V --> RC[Related healthy-query regression checks]
+    C --> RV[Revert sandbox rule]
 ```
 
-- `data/`: simulated catalog and aggregated search events.
-- `src/lib/search-analysis/`: pure metrics, baselines, leak detection, severity, and opportunity calculations.
-- `src/lib/commerce-search/`: deterministic lexical storefront and catalog search simulator.
-- `src/lib/investigation-agent/`: AI SDK runtime, structured result schema, read tools, trace, and server-side grounding.
-- `src/app/api/investigate/`: endpoint that accepts only currently detected leaks.
-- `src/components/investigation-panel.tsx`: idle, investigating, completed, error, and unconfigured UI states.
+### Deterministic layer
 
-### Deterministic detection
-
-A query becomes a candidate when it has at least 50 searches, conversion below 45% of the healthy-query baseline, and either low CTR or zero purchases. Severity combines volume, CTR gap, conversion gap, zero purchases, and current storefront result count. No query string is hardcoded in the detector.
-
-### Estimated GMV opportunity
-
-The estimate is incremental:
+- `src/lib/search-analysis/` calculates baselines, leak severity, and incremental Estimated GMV opportunity.
+- `src/lib/commerce-search/` performs lexical storefront and catalog search. `searchStorefront(query, products, config)` applies optional sandbox rules before matching real catalog products.
+- The opportunity formula remains:
 
 ```text
 searches × max(0, baseline conversion rate - current conversion rate) × relevant average order value
 ```
 
-Relevant AOV is the average price of the current in-stock storefront results for that query. When the storefront returns no result, the documented demo fallback is the average price of all in-stock catalog products. Every input is clamped at zero or greater.
+This is always an **Estimated GMV opportunity**, never recovered or guaranteed revenue.
 
-This value is always an **Estimated GMV opportunity**. It is not recovered, guaranteed, or realized revenue.
+### Investigation
 
-### Investigation agent
-
-The server uses the Vercel AI SDK, the OpenAI Responses provider, `gpt-5.6-sol`, and a Zod-validated `InvestigationResult`. The agent chooses alternative catalog search terms, while the application controls tool scope and validates the response.
-
-Available read tools:
+`src/lib/investigation-agent/` uses the Vercel AI SDK, the OpenAI Responses provider, `gpt-5.6-sol`, and Zod structured output. Its tools remain read-only:
 
 - `getLeakContext`
 - `searchStorefront`
 - `searchCatalog`
 - `getProductDetails`
 
-The server rejects unknown product IDs, requires related products to have been discovered and inspected, requires recommended synonym targets to have been searched, and replaces model-provided evidence and product facts with values observed from actual tool calls. The response includes a trace built only from executed tools.
+Catalog search hypotheses are distinct from the executable rule. When evidence supports a safe search change, the result contains a minimal `SearchActionProposal` with type, source, targets, demo scope, confidence, risk, reversibility, and rationale.
 
-There are no write tools in this milestone.
+The server grounds every product and target in actual tool results, applies risk policy, and signs the approved proposal. The browser cannot change its source, targets, confidence, or risk without invalidating that authorization.
+
+### Act sandbox
+
+`src/lib/search-actions/` owns the Act boundary:
+
+- `SearchConfiguration` stores only sandbox synonym and query-rewrite rules.
+- `applySearchRule()` is the only Act write tool.
+- The tool cannot edit products, metrics, search events, or external systems.
+- Every applied rule records its collection, source, targets, and deterministic rule ID.
+- `revertSearchRule()` removes that rule and confirms the original storefront behavior is restored.
+
+`POST /api/resolve` accepts only a currently detected leak and a signed proposal returned by its investigation. It rejects malformed input, altered browser payloads, unsupported targets, and high-risk actions. Low-risk actions can be applied after human approval. Medium-risk actions show a warning but can be previewed in the sandbox. High-risk actions are blocked.
+
+### Validation and regression checks
+
+`validateSearchChange()` compares the original query with an empty configuration and the updated sandbox configuration. Validation passes only when result count improves, new catalog products appear, and no related healthy query degrades.
+
+Related healthy queries are selected generically from the simulated search-event dataset by shared normalized tokens. The action trace is assembled only as backend operations execute.
 
 ## Running locally
 
-Requirements: Node.js 20.9 or newer and npm.
+Requirements: Node.js 22 or newer and npm.
 
 ```bash
 npm install
@@ -92,9 +102,9 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Set `OPENAI_API_KEY` in `.env.local` to enable investigation. Without a key, the dashboard and deterministic detection continue to work, and the investigation control clearly reports that agent configuration is required. It never substitutes a fake investigation.
+Set `OPENAI_API_KEY` in `.env.local` to enable investigation. `CARCARAH_APPROVAL_SECRET` is optional for the local demo and otherwise falls back to `OPENAI_API_KEY` for signing short-lived action approvals.
 
-Open [http://localhost:3000](http://localhost:3000).
+Without an API key, deterministic detection and the dashboard still work. No fake investigation or action is generated.
 
 Quality checks:
 
@@ -104,6 +114,8 @@ npm test
 npm run build
 ```
 
-## Disclaimer
+## Scope and disclaimer
 
-GMV opportunity metrics and agent recommendations are based on simulated demo data. A recommendation is not an executed storefront change.
+This milestone does not add authentication, a database, embeddings, RAG, multiple agents, external analytics, or Shopify/VTEX integrations. Applied rules exist only in the response-scoped demo sandbox.
+
+GMV opportunity metrics and agent recommendations use simulated data. A resolved sandbox leak means the deterministic search experience improved in validation; it does not mean revenue was recovered.

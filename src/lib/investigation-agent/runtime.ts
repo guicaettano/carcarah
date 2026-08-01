@@ -10,6 +10,7 @@ import {
 } from "@ai-sdk/openai";
 
 import { investigationResultSchema } from "./schema";
+import { createSearchActionApproval } from "../search-actions/authorization";
 import {
   createInvestigationRuntimeState,
   createReadTools,
@@ -72,13 +73,18 @@ Success means:
 - form semantic hypotheses and choose your own alternative catalog search terms
 - inspect candidate products before citing them
 - diagnose the root cause and recommend, but never execute, one allowed action
+- keep catalog search hypotheses separate from an executable search rule
+- for a synonym recommendation, propose the smallest safe source segment from the shopper query; use a full query rewrite only when a narrower synonym would be unsafe
 - return only claims supported by tool results
 
 Constraints:
 - tools are read-only
 - never invent products, metrics, prices, stock, sales, or evidence
 - related products must have been returned by searchCatalog and inspected with getProductDetails
-- a synonym target must be a term you actually tested with searchCatalog
+- executable targets must be supported by terms tested with searchCatalog and inspected products
+- actionProposal is required only for create_synonym; otherwise return null
+- actionProposal scope is demo_storefront and reversible is true
+- never call or simulate a write tool; human approval happens after this run
 - if evidence is insufficient, use unknown and no_action
 - stop after the structured investigation is complete`,
     prompt: `Investigate this detected revenue leak: ${query}`,
@@ -109,5 +115,14 @@ Constraints:
     state,
   );
 
-  return { investigation, trace: state.trace };
+  const approval = investigation.actionProposal
+    ? createSearchActionApproval(
+        query,
+        investigation.actionProposal,
+        state.searchedTerms,
+        investigation.relatedProducts.map((product) => product.id),
+      )
+    : null;
+
+  return { investigation, trace: state.trace, approval };
 }

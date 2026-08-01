@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { investigationResultSchema } from "./schema";
+import type { SearchActionApproval } from "../search-actions/types";
 
 export const READ_TOOL_NAMES = [
   "getLeakContext",
@@ -21,6 +22,7 @@ export interface InvestigationTraceEvent {
 export interface InvestigationResponse {
   investigation: InvestigationResult;
   trace: InvestigationTraceEvent[];
+  approval: SearchActionApproval | null;
 }
 
 export interface InvestigationRuntimeState {
