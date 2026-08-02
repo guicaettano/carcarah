@@ -4,10 +4,10 @@ export const formatCurrency = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 0,
 });
 
-export const formatNumber = new Intl.NumberFormat("en-US");
+export const formatNumber = new Intl.NumberFormat("pt-BR");
 
 export function formatPercentage(value: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("pt-BR", {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
