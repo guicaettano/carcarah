@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { INVESTIGATION_WRITE_TOOLS } from "../tools/write-tools";
 import type { InvestigationRuntimeState } from "../types";
-import { validateAndGroundInvestigationResult } from "../validation";
+import {
+  createSafeInvestigationFallback,
+  InvestigationGroundingError,
+  validateAndGroundInvestigationResult,
+} from "../validation";
 
 function stateWithProduct(productId: string): InvestigationRuntimeState {
   return {
@@ -94,5 +98,63 @@ describe("investigation result guardrails", () => {
 
   it("does not expose write tools in the investigation milestone", () => {
     expect(Object.keys(INVESTIGATION_WRITE_TOOLS)).toEqual([]);
+  });
+
+  it("classifies unsearched recommendation terms as a grounding failure", () => {
+    const candidate = {
+      query: "moletom canguru preto",
+      diagnosis: "The catalog uses different vocabulary.",
+      rootCause: "vocabulary_mismatch",
+      evidence: [{ type: "catalog_search", description: "Model claim." }],
+      relatedProducts: [],
+      recommendation: {
+        action: "create_synonym",
+        sourceTerm: "canguru",
+        targetTerms: ["hoodie"],
+      },
+      actionProposal: {
+        type: "synonym_rule",
+        source: "canguru",
+        targets: ["hoodie"],
+        scope: "demo_storefront",
+        confidence: 0.9,
+        risk: "low",
+        reversible: true,
+        rationale: "The catalog contains hoodies.",
+      },
+      confidence: 0.9,
+      risk: "low",
+    };
+
+    expect(() =>
+      validateAndGroundInvestigationResult(
+        candidate,
+        candidate.query,
+        stateWithProduct("prod_001"),
+      ),
+    ).toThrow(InvestigationGroundingError);
+  });
+
+  it("returns a grounded no-action result when repair is not possible", () => {
+    const state = stateWithProduct("prod_001");
+    const result = createSafeInvestigationFallback(
+      "moletom canguru preto",
+      state,
+    );
+
+    expect(result).toMatchObject({
+      query: "moletom canguru preto",
+      rootCause: "unknown",
+      confidence: 0,
+      risk: "low",
+      recommendation: {
+        action: "no_action",
+        sourceTerm: null,
+        targetTerms: null,
+      },
+      actionProposal: null,
+      relatedProducts: [],
+    });
+    expect(result.evidence).toHaveLength(state.trace.length);
   });
 });

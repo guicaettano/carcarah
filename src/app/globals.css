@@ -97,15 +97,25 @@ a:focus-visible {
 .brand__mark {
   align-items: center;
   background: var(--text);
-  border-radius: 6px;
-  color: var(--background);
+  border-radius: 7px;
   display: inline-flex;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 12px;
-  font-weight: 700;
-  height: 26px;
+  height: 30px;
   justify-content: center;
-  width: 26px;
+  overflow: hidden;
+  width: 30px;
+}
+
+.brand__mark img {
+  filter: invert(1);
+  height: 24px;
+  object-fit: contain;
+  width: 24px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .brand__mark img {
+    filter: none;
+  }
 }
 
 .demo-label,
