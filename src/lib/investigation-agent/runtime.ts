@@ -16,8 +16,12 @@ import {
   createReadTools,
   type ReadTools,
 } from "./tools/read-tools";
-import type { InvestigationResponse } from "./types";
-import { validateAndGroundInvestigationResult } from "./validation";
+import type { InvestigationResponse, InvestigationResult } from "./types";
+import {
+  createSafeInvestigationFallback,
+  InvestigationGroundingError,
+  validateAndGroundInvestigationResult,
+} from "./validation";
 
 export const INVESTIGATION_MODEL = "gpt-5.6-sol";
 
@@ -52,6 +56,58 @@ function createStepPreparation(
 
     return { toolChoice: "auto" };
   };
+}
+
+const providerOptions = {
+  openai: {
+    reasoningEffort: "low",
+    parallelToolCalls: false,
+    store: false,
+    strictJsonSchema: true,
+    textVerbosity: "low",
+  } satisfies OpenAIResponsesProviderOptions,
+};
+
+function structuredInvestigationOutput() {
+  return Output.object({
+    name: "carcarah_investigation",
+    description: "Grounded diagnosis and recommended action for one query.",
+    schema: investigationResultSchema,
+  });
+}
+
+async function repairInvestigationResult(
+  openai: ReturnType<typeof createOpenAI>,
+  query: string,
+  candidate: InvestigationResult,
+  state: ReturnType<typeof createInvestigationRuntimeState>,
+): Promise<InvestigationResult> {
+  const searchedTerms = [...state.searchedTerms];
+  const inspectedProductIds = [...state.inspectedProductIds];
+  const result = await generateText({
+    model: openai.responses(INVESTIGATION_MODEL),
+    system: `You repair a structured commerce-search investigation that failed server-side grounding.
+
+Return a corrected investigation using only evidence already collected.
+- recommendation.targetTerms must contain only exact values from the allowed searched terms
+- relatedProducts must contain only IDs from the allowed inspected product IDs
+- actionProposal targets must be supported by the allowed searched terms
+- actionProposal source must be a contiguous segment of the shopper query
+- if no grounded executable recommendation is possible, use no_action with null sourceTerm, targetTerms, and actionProposal
+- never invent or broaden evidence`,
+    prompt: JSON.stringify({
+      shopperQuery: query,
+      allowedSearchedTerms: searchedTerms,
+      allowedInspectedProductIds: inspectedProductIds,
+      candidate,
+    }),
+    output: structuredInvestigationOutput(),
+    maxOutputTokens: 2_000,
+    timeout: { totalMs: 30_000 },
+    providerOptions,
+  });
+
+  return result.output;
 }
 
 export async function investigateRevenueLeak(
@@ -91,29 +147,43 @@ Constraints:
     tools,
     prepareStep: createStepPreparation(state),
     stopWhen: stepCountIs(8),
-    output: Output.object({
-      name: "carcarah_investigation",
-      description: "Grounded diagnosis and recommended action for one query.",
-      schema: investigationResultSchema,
-    }),
+    output: structuredInvestigationOutput(),
     maxOutputTokens: 2_000,
     timeout: { totalMs: 60_000, stepMs: 20_000 },
-    providerOptions: {
-      openai: {
-        reasoningEffort: "low",
-        parallelToolCalls: false,
-        store: false,
-        strictJsonSchema: true,
-        textVerbosity: "low",
-      } satisfies OpenAIResponsesProviderOptions,
-    },
+    providerOptions,
   });
 
-  const investigation = validateAndGroundInvestigationResult(
-    result.output,
-    query,
-    state,
-  );
+  let investigation: InvestigationResult;
+  try {
+    investigation = validateAndGroundInvestigationResult(
+      result.output,
+      query,
+      state,
+    );
+  } catch (error) {
+    if (!(error instanceof InvestigationGroundingError)) throw error;
+
+    console.warn("Carcarah is repairing an ungrounded investigation", error);
+    try {
+      const repairedCandidate = await repairInvestigationResult(
+        openai,
+        query,
+        result.output,
+        state,
+      );
+      investigation = validateAndGroundInvestigationResult(
+        repairedCandidate,
+        query,
+        state,
+      );
+    } catch (repairError) {
+      console.warn(
+        "Carcarah could not repair the investigation; returning a safe fallback",
+        repairError,
+      );
+      investigation = createSafeInvestigationFallback(query, state);
+    }
+  }
 
   const approval = investigation.actionProposal
     ? createSearchActionApproval(

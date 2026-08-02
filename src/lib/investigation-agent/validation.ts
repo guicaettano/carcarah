@@ -9,6 +9,13 @@ import type {
   ReadToolName,
 } from "./types";
 
+export class InvestigationGroundingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvestigationGroundingError";
+  }
+}
+
 const evidenceTypeByTool: Record<
   ReadToolName,
   InvestigationResult["evidence"][number]["type"]
@@ -24,7 +31,9 @@ function requireToolCall(
   toolName: ReadToolName,
 ): void {
   if (!trace.some((event) => event.tool === toolName)) {
-    throw new Error(`Investigation did not execute required tool: ${toolName}`);
+    throw new InvestigationGroundingError(
+      `Investigation did not execute required tool: ${toolName}`,
+    );
   }
 }
 
@@ -48,10 +57,12 @@ export function validateAndGroundInvestigationResult(
       (product) => product.id === relatedProduct.id,
     );
     if (!catalogProduct) {
-      throw new Error(`Unknown catalog product: ${relatedProduct.id}`);
+      throw new InvestigationGroundingError(
+        `Unknown catalog product: ${relatedProduct.id}`,
+      );
     }
     if (!state.inspectedProductIds.has(relatedProduct.id)) {
-      throw new Error(
+      throw new InvestigationGroundingError(
         `Product was not inspected during this investigation: ${relatedProduct.id}`,
       );
     }
@@ -67,41 +78,58 @@ export function validateAndGroundInvestigationResult(
   const { action, sourceTerm, targetTerms } = parsed.recommendation;
   if (action === "create_synonym") {
     if (!sourceTerm || !targetTerms || targetTerms.length === 0) {
-      throw new Error("A synonym recommendation requires source and target terms.");
+      throw new InvestigationGroundingError(
+        "A synonym recommendation requires source and target terms.",
+      );
     }
     if (!normalizeSearchText(query).includes(normalizeSearchText(sourceTerm))) {
-      throw new Error("The synonym source term must come from the shopper query.");
+      throw new InvestigationGroundingError(
+        "The synonym source term must come from the shopper query.",
+      );
     }
     const unsearchedTargets = targetTerms.filter(
       (term) => !state.searchedTerms.has(normalizeSearchText(term)),
     );
     if (unsearchedTargets.length > 0) {
-      throw new Error(
+      throw new InvestigationGroundingError(
         `Recommendation includes catalog terms that were not searched: ${unsearchedTargets.join(", ")}`,
       );
     }
   }
 
   if (action === "boost_products" && relatedProducts.length === 0) {
-    throw new Error("A boost recommendation requires inspected products.");
+    throw new InvestigationGroundingError(
+      "A boost recommendation requires inspected products.",
+    );
   }
 
   if (action === "create_synonym" && !parsed.actionProposal) {
-    throw new Error("A synonym recommendation requires an executable proposal.");
+    throw new InvestigationGroundingError(
+      "A synonym recommendation requires an executable proposal.",
+    );
   }
   if (action !== "create_synonym" && parsed.actionProposal) {
-    throw new Error(
+    throw new InvestigationGroundingError(
       "Only a grounded synonym recommendation can produce a search action proposal.",
     );
   }
 
-  const actionProposal = parsed.actionProposal
-    ? groundSearchActionProposal(parsed.actionProposal, {
+  let actionProposal = null;
+  if (parsed.actionProposal) {
+    try {
+      actionProposal = groundSearchActionProposal(parsed.actionProposal, {
         query,
         supportedTerms: state.searchedTerms,
         supportedProductIds: state.inspectedProductIds,
-      })
-    : null;
+      });
+    } catch (error) {
+      throw new InvestigationGroundingError(
+        error instanceof Error
+          ? error.message
+          : "The executable proposal could not be grounded.",
+      );
+    }
+  }
 
   const evidence = state.trace.map((event) => ({
     type: evidenceTypeByTool[event.tool],
@@ -115,4 +143,35 @@ export function validateAndGroundInvestigationResult(
     relatedProducts,
     actionProposal,
   });
+}
+
+export function createSafeInvestigationFallback(
+  query: string,
+  state: InvestigationRuntimeState,
+): InvestigationResult {
+  return validateAndGroundInvestigationResult(
+    {
+      query,
+      diagnosis:
+        "O Carcarah analisou os dados disponíveis, mas não reuniu evidências suficientes para recomendar uma alteração segura.",
+      rootCause: "unknown",
+      evidence: [
+        {
+          type: "leak_metrics",
+          description: "A investigação foi concluída sem uma recomendação executável.",
+        },
+      ],
+      relatedProducts: [],
+      recommendation: {
+        action: "no_action",
+        sourceTerm: null,
+        targetTerms: null,
+      },
+      actionProposal: null,
+      confidence: 0,
+      risk: "low",
+    },
+    query,
+    state,
+  );
 }
