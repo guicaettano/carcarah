@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import carcarahMark from "@/app/carcarah.png";
+
 export function SiteHeader() {
   return (
     <header className="site-header">
@@ -9,10 +11,10 @@ export function SiteHeader() {
           <span className="brand__mark" aria-hidden="true">
             <Image
               alt=""
-              height={24}
+              height={34}
               priority
-              src="/carcarah-mark.png"
-              width={24}
+              src={carcarahMark}
+              width={40}
             />
           </span>
           <span>Carcarah</span>
