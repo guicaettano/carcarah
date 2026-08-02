@@ -12,11 +12,11 @@ export default function DashboardPage() {
   return (
     <main className="page-shell">
       <section className="dashboard-intro">
-        <p className="section-kicker">Search intelligence</p>
-        <h1>Hunt down revenue leaks in commerce search.</h1>
+        <p className="section-kicker">Inteligência de busca</p>
+        <h1>Encontre onde sua busca está deixando vendas escapar.</h1>
         <p>
-          Deterministic analysis that shows where shopper demand is failing to
-          convert into orders.
+          O Carcarah monitora as buscas da loja, identifica oportunidades
+          perdidas e encontra a causa antes de recomendar uma correção.
         </p>
       </section>
 
@@ -24,9 +24,10 @@ export default function DashboardPage() {
 
       <section className="leaks-section">
         <div className="section-heading">
-          <h2>Revenue leaks</h2>
+          <h2>Oportunidades perdidas</h2>
           <p>
-            Ranked by estimated monthly GMV opportunity using simulated data.
+            Priorizadas pelo potencial estimado de GMV mensal em dados de
+            demonstração.
           </p>
         </div>
 
@@ -37,14 +38,15 @@ export default function DashboardPage() {
           </>
         ) : (
           <div className="empty-state">
-            <h3>No revenue leaks detected</h3>
-            <p>All analyzed queries are performing within the current baseline.</p>
+            <h3>Nenhuma oportunidade detectada</h3>
+            <p>Todas as buscas analisadas estão dentro da referência atual.</p>
           </div>
         )}
       </section>
 
       <p className="data-disclaimer">
-        Demo data. GMV opportunity is an estimate, not recovered revenue.
+        Dados de demonstração. A oportunidade de GMV é uma estimativa, não uma
+        receita recuperada.
       </p>
     </main>
   );

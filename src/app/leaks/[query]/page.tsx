@@ -39,39 +39,47 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
   if (!leak) notFound();
 
   const metrics = [
-    ["Search volume", formatNumber.format(leak.searches)],
-    ["Clicks", formatNumber.format(leak.clicks)],
-    ["Add to carts", formatNumber.format(leak.addToCarts)],
-    ["Purchases", formatNumber.format(leak.purchases)],
+    ["Volume de buscas", formatNumber.format(leak.searches)],
+    ["Cliques", formatNumber.format(leak.clicks)],
+    ["Adições ao carrinho", formatNumber.format(leak.addToCarts)],
+    ["Compras", formatNumber.format(leak.purchases)],
     ["CTR", formatPercentage(leak.ctr)],
-    ["Conversion", formatPercentage(leak.conversionRate)],
+    ["Conversão", formatPercentage(leak.conversionRate)],
   ];
 
   return (
     <main className="page-shell detail-page">
       <Link className="back-link" href="/">
-        ← Back to revenue leaks
+        ← Voltar para oportunidades
       </Link>
 
       <section className="detail-hero">
         <div className="detail-hero__title">
           <div className="detail-hero__meta">
-            <span className="demo-label">Demo data</span>
+            <span className="demo-label">Busca com oportunidade</span>
             <SeverityBadge severity={leak.severity} />
           </div>
           <h1>{leak.query}</h1>
-          <p>{leak.reason}</p>
+          <p className="detail-hero__signal">
+            <span>{formatNumber.format(leak.searches)} buscas</span>
+            <span>{formatNumber.format(leak.purchases)} compras</span>
+            <span>{formatPercentage(leak.conversionRate)} conversão</span>
+          </p>
         </div>
 
         <div className="detail-opportunity">
-          <p>Estimated GMV opportunity</p>
+          <p>Oportunidade estimada de GMV</p>
           <strong>{formatCurrency.format(leak.estimatedMonthlyOpportunity)}</strong>
-          <span>per month</span>
+          <span>/mês</span>
+          <small>
+            Estimativa baseada na diferença entre esta busca e a referência de
+            buscas saudáveis.
+          </small>
         </div>
       </section>
 
       <section className="detail-section">
-        <h2>Query metrics</h2>
+        <h2>Métricas da busca</h2>
         <div className="detail-metrics">
           {metrics.map(([label, value]) => (
             <div key={label}>
@@ -84,32 +92,32 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
 
       <section className="analysis-grid">
         <div className="analysis-panel">
-          <h2>Baseline comparison</h2>
+          <h2>Comparação com a referência</h2>
           <dl>
             <div>
-              <dt>Query conversion</dt>
+              <dt>Conversão desta busca</dt>
               <dd>{formatPercentage(leak.conversionRate)}</dd>
             </div>
             <div>
-              <dt>Healthy-query baseline</dt>
+              <dt>Referência de conversão saudável</dt>
               <dd>{formatPercentage(leak.baselineConversionRate)}</dd>
             </div>
             <div>
-              <dt>Query CTR</dt>
+              <dt>CTR desta busca</dt>
               <dd>{formatPercentage(leak.ctr)}</dd>
             </div>
             <div>
-              <dt>Healthy-query CTR baseline</dt>
+              <dt>Referência de CTR saudável</dt>
               <dd>{formatPercentage(leak.baselineCtr)}</dd>
             </div>
           </dl>
         </div>
 
         <div className="analysis-panel">
-          <h2>Opportunity formula</h2>
+          <h2>Cálculo da oportunidade</h2>
           <p className="formula">
-            Searches × max(0, baseline conversion - query conversion) ×
-            relevant AOV
+            Buscas × máx(0, conversão de referência - conversão da busca) ×
+            ticket médio relevante
           </p>
           <p className="formula-values">
             {formatNumber.format(leak.searches)} ×{" "}
@@ -118,12 +126,12 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
             {formatCurrency.format(leak.relevantAverageOrderValue)}
           </p>
           <p className="panel-note">
-            Relevant AOV source:{" "}
+            Fonte do ticket médio:{" "}
             {leak.averageOrderValueSource === "storefront_results"
-              ? "average price of current in-stock storefront results."
-              : "fallback average price of all in-stock demo catalog products because the query returns no result."}
-            {" "}This is an opportunity estimate, not recovered or guaranteed
-            revenue.
+              ? "preço médio dos produtos disponíveis retornados pela busca."
+              : "preço médio dos produtos disponíveis no catálogo de demonstração, pois a busca não retorna resultados."}
+            {" "}Esta é uma estimativa de oportunidade, não uma receita recuperada
+            ou garantida.
           </p>
         </div>
       </section>
@@ -131,13 +139,15 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
       <section className="status-panel">
         <div>
           <span>Status</span>
-          <strong>Detected</strong>
+          <strong>Detectado</strong>
         </div>
         <div>
-          <span>Current storefront result</span>
+          <span>Resultado atual da busca</span>
           <strong>
-            {leak.storefrontResultCount} in-stock{" "}
-            {leak.storefrontResultCount === 1 ? "product" : "products"}
+            {leak.storefrontResultCount}{" "}
+            {leak.storefrontResultCount === 1
+              ? "produto disponível"
+              : "produtos disponíveis"}
           </strong>
         </div>
       </section>

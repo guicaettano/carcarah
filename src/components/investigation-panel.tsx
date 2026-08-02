@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 import type {
   InvestigationResponse,
   InvestigationResult,
+  InvestigationTraceEvent,
 } from "@/lib/investigation-agent/types";
 import type {
+  ActionTraceEvent,
   SearchActionApproval,
   SearchResolutionResponse,
   SearchRevertResponse,
@@ -26,25 +29,80 @@ interface InvestigationPanelProps {
   agentConfigured: boolean;
 }
 
+interface ApiErrorBody {
+  code?: string;
+}
+
 const rootCauseLabels: Record<InvestigationResult["rootCause"], string> = {
-  vocabulary_mismatch: "Vocabulary mismatch",
-  ranking_problem: "Ranking problem",
-  catalog_gap: "Catalog gap",
-  stock_problem: "Stock problem",
-  unknown: "Unknown",
+  vocabulary_mismatch: "Diferença de vocabulário",
+  ranking_problem: "Problema de ordenação",
+  catalog_gap: "Lacuna no catálogo",
+  stock_problem: "Problema de estoque",
+  unknown: "Causa ainda não identificada",
 };
 
 const actionLabels: Record<
   InvestigationResult["recommendation"]["action"],
   string
 > = {
-  create_synonym: "Recommend a search rule",
-  boost_products: "Recommend boosting related products",
-  no_action: "No action recommended",
+  create_synonym: "Recomendar uma regra de busca",
+  boost_products: "Recomendar ajuste de ordenação",
+  no_action: "Nenhuma ação recomendada",
+};
+
+const riskLabels: Record<InvestigationResult["risk"], string> = {
+  low: "Baixo",
+  medium: "Médio",
+  high: "Alto",
+};
+
+const evidenceLabels: Record<
+  InvestigationResult["evidence"][number]["type"],
+  string
+> = {
+  leak_metrics: "Desempenho da busca",
+  storefront_results: "Resultado atual",
+  catalog_search: "Investigação do catálogo",
+  product_details: "Detalhes dos produtos",
+};
+
+const proposalTypeLabels: Record<
+  SearchActionApproval["proposal"]["type"],
+  string
+> = {
+  query_rewrite: "Reescrita da busca",
+  synonym_rule: "Regra de sinônimo",
 };
 
 function confidenceLabel(confidence: number): string {
-  return `${Math.round(confidence * 100)}% confidence`;
+  return `${Math.round(confidence * 100)}%`;
+}
+
+function investigationError(code?: string): string {
+  if (code === "AGENT_NOT_CONFIGURED") {
+    return "O Carcarah ainda não está configurado para executar a investigação.";
+  }
+  if (code === "NOT_REVENUE_LEAK") {
+    return "Esta busca não aparece mais entre as oportunidades detectadas.";
+  }
+  return "Não foi possível concluir a investigação. Tente novamente.";
+}
+
+function actionRequestError(code?: string): string {
+  if (code === "HIGH_RISK_ACTION") {
+    return "A alteração foi bloqueada pela política de segurança.";
+  }
+  if (code === "ACTION_NOT_AUTHORIZED") {
+    return "A aprovação expirou ou não corresponde à ação investigada.";
+  }
+  return "Não foi possível aplicar a alteração no sandbox.";
+}
+
+function revertRequestError(code?: string): string {
+  if (code === "ACTION_NOT_AUTHORIZED") {
+    return "A aprovação expirou ou não corresponde à alteração aplicada.";
+  }
+  return "Não foi possível reverter a alteração no sandbox.";
 }
 
 export function InvestigationPanel({
@@ -78,14 +136,10 @@ export function InvestigationPanel({
       });
       const body = (await response.json()) as
         | InvestigationResponse
-        | { error?: string };
+        | ApiErrorBody;
 
       if (!response.ok || !("investigation" in body)) {
-        throw new Error(
-          "error" in body && body.error
-            ? body.error
-            : "The investigation could not be completed.",
-        );
+        throw new Error(investigationError("code" in body ? body.code : undefined));
       }
 
       setState({ status: "completed", data: body });
@@ -95,7 +149,7 @@ export function InvestigationPanel({
         message:
           error instanceof Error
             ? error.message
-            : "The investigation could not be completed.",
+            : "Não foi possível concluir a investigação. Tente novamente.",
       });
     }
   }
@@ -117,13 +171,9 @@ export function InvestigationPanel({
       });
       const body = (await response.json()) as
         | SearchResolutionResponse
-        | { error?: string };
+        | ApiErrorBody;
       if (!response.ok || !("operation" in body) || body.operation !== "apply") {
-        throw new Error(
-          "error" in body && body.error
-            ? body.error
-            : "The sandbox action could not be completed.",
-        );
+        throw new Error(actionRequestError("code" in body ? body.code : undefined));
       }
 
       setResolution(body);
@@ -133,7 +183,7 @@ export function InvestigationPanel({
       setActionError(
         error instanceof Error
           ? error.message
-          : "The sandbox action could not be completed.",
+          : "Não foi possível aplicar a alteração no sandbox.",
       );
     }
   }
@@ -155,25 +205,24 @@ export function InvestigationPanel({
           ruleId: resolution.change.ruleId,
         }),
       });
-      const body = (await response.json()) as
-        | SearchRevertResponse
-        | { error?: string };
+      const body = (await response.json()) as SearchRevertResponse | ApiErrorBody;
       if (!response.ok || !("operation" in body) || body.operation !== "revert") {
-        throw new Error(
-          "error" in body && body.error
-            ? body.error
-            : "The sandbox change could not be reverted.",
-        );
+        throw new Error(revertRequestError("code" in body ? body.code : undefined));
       }
 
       setRevertResult(body);
-      setActionStatus("reverted");
+      if (body.revertConfirmed) {
+        setActionStatus("reverted");
+      } else {
+        setActionStatus("applied");
+        setActionError("A reversão foi executada, mas a restauração não foi confirmada.");
+      }
     } catch (error) {
       setActionStatus("applied");
       setActionError(
         error instanceof Error
           ? error.message
-          : "The sandbox change could not be reverted.",
+          : "Não foi possível reverter a alteração no sandbox.",
       );
     }
   }
@@ -184,11 +233,11 @@ export function InvestigationPanel({
     <section className="investigation-section" aria-labelledby="investigation-title">
       <div className="investigation-section__heading">
         <div>
-          <p className="section-kicker">Investigate</p>
-          <h2 id="investigation-title">Agent analysis</h2>
+          <p className="section-kicker">Investigação</p>
+          <h2 id="investigation-title">Análise do Carcarah</h2>
           <p>
-            Carcarah inspects this leak with read-only tools. Applying a search
-            rule always requires separate human approval.
+            O Carcarah analisa o desempenho da busca, testa o resultado atual e
+            investiga o catálogo antes de recomendar qualquer alteração.
           </p>
         </div>
         <button
@@ -198,46 +247,68 @@ export function InvestigationPanel({
           type="button"
         >
           {isInvestigating
-            ? "Investigating..."
+            ? "Investigando..."
             : state.status === "completed" || state.status === "error"
-              ? "Run investigation again"
-              : "Investigate with Carcarah"}
+              ? "Investigar novamente"
+              : "Investigar com Carcarah"}
         </button>
       </div>
 
       {!agentConfigured ? (
         <div className="agent-notice" role="status">
-          Agent runtime is not configured. Add <code>OPENAI_API_KEY</code> to
-          enable a real investigation.
+          O agente ainda não está configurado. Adicione <code>OPENAI_API_KEY</code>
+          para habilitar uma investigação real.
         </div>
       ) : null}
 
       <div aria-live="polite">
-        {isInvestigating ? (
-          <div className="investigation-progress" role="status">
-            <span className="investigation-progress__dot" aria-hidden="true" />
-            Inspecting leak metrics, storefront results, and catalog evidence.
-          </div>
-        ) : null}
+        <AnimatePresence initial={false} mode="wait">
+          {isInvestigating ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="investigation-progress"
+              exit={{ opacity: 0, y: -6 }}
+              initial={{ opacity: 0, y: 6 }}
+              key="investigating"
+              role="status"
+            >
+              <span className="investigation-progress__dot" aria-hidden="true" />
+              Analisando desempenho, resultados atuais e catálogo.
+            </motion.div>
+          ) : null}
 
-        {state.status === "error" ? (
-          <div className="investigation-error" role="alert">
-            <strong>Investigation failed</strong>
-            <p>{state.message}</p>
-          </div>
-        ) : null}
+          {state.status === "error" ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="investigation-error"
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 6 }}
+              key="error"
+              role="alert"
+            >
+              <strong>Falha na investigação</strong>
+              <p>{state.message}</p>
+            </motion.div>
+          ) : null}
 
-        {state.status === "completed" ? (
-          <InvestigationReport
-            actionError={actionError}
-            actionStatus={actionStatus}
-            onApply={applyInSandbox}
-            onRevert={revertSandboxChange}
-            resolution={resolution}
-            response={state.data}
-            revertResult={revertResult}
-          />
-        ) : null}
+          {state.status === "completed" ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 12 }}
+              key="completed"
+            >
+              <InvestigationReport
+                actionError={actionError}
+                actionStatus={actionStatus}
+                onApply={applyInSandbox}
+                onRevert={revertSandboxChange}
+                resolution={resolution}
+                response={state.data}
+                revertResult={revertResult}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </section>
   );
@@ -267,34 +338,34 @@ function InvestigationReport({
 
   return (
     <div className="investigation-report">
-      <p className="investigation-report__kicker">Carcarah investigation</p>
+      <p className="investigation-report__kicker">Resultado da investigação</p>
       <div className="investigation-report__summary">
         <div>
-          <span>Root cause</span>
+          <span>Causa identificada</span>
           <strong>{rootCauseLabels[investigation.rootCause]}</strong>
         </div>
         <div>
-          <span>Confidence</span>
+          <span>Confiança</span>
           <strong>{confidenceLabel(investigation.confidence)}</strong>
         </div>
         <div>
-          <span>Recommendation risk</span>
-          <strong>{investigation.risk}</strong>
+          <span>Risco da ação</span>
+          <strong>{riskLabels[investigation.risk]}</strong>
         </div>
       </div>
 
       <div className="investigation-report__diagnosis">
-        <h3>Diagnosis</h3>
+        <h3>Diagnóstico</h3>
         <p>{investigation.diagnosis}</p>
       </div>
 
       <div className="investigation-report__grid">
         <div>
-          <h3>Observed evidence</h3>
+          <h3>Evidências</h3>
           <ol className="evidence-list">
             {investigation.evidence.map((item, index) => (
               <li key={`${item.type}-${index}`}>
-                <span>{item.type.replaceAll("_", " ")}</span>
+                <span>{evidenceLabels[item.type]}</span>
                 <p>{item.description}</p>
               </li>
             ))}
@@ -302,19 +373,18 @@ function InvestigationReport({
         </div>
 
         <div>
-          <h3>Recommended action</h3>
+          <h3>Ação recomendada</h3>
           <div className="recommendation-card">
             <strong>{actionLabels[recommendation.action]}</strong>
             {approval ? (
               <ExecutableProposal approval={approval} />
             ) : recommendation.action === "boost_products" ? (
-              <p>Review a ranking boost outside this sandbox milestone.</p>
+              <p>Revise o ajuste de ordenação fora deste sandbox.</p>
             ) : (
-              <p>Carcarah did not find a safe executable search rule.</p>
+              <p>O Carcarah não encontrou uma regra de busca segura para aplicar.</p>
             )}
             <span>
-              Recommendation only. Nothing changes until a human approves the
-              demo sandbox action.
+              Esta é apenas uma recomendação. Nada muda sem aprovação humana.
             </span>
           </div>
 
@@ -331,15 +401,15 @@ function InvestigationReport({
 
       {investigation.relatedProducts.length > 0 ? (
         <div className="related-products">
-          <h3>Inspected related products</h3>
+          <h3>Produtos relacionados encontrados</h3>
           <div className="related-products__grid">
             {investigation.relatedProducts.map((product) => (
               <article key={product.id}>
                 <span>{product.id}</span>
                 <strong>{product.name}</strong>
                 <p>
-                  {formatCurrency.format(product.price)} · {product.stock} in
-                  stock
+                  {formatCurrency.format(product.price)} · {product.stock} em
+                  estoque
                 </p>
               </article>
             ))}
@@ -347,20 +417,7 @@ function InvestigationReport({
         </div>
       ) : null}
 
-      <details className="agent-trace">
-        <summary>Agent trace · {trace.length} read-only tool calls</summary>
-        <ol>
-          {trace.map((event, index) => (
-            <li key={`${event.tool}-${index}`}>
-              <span aria-hidden="true">✓</span>
-              <div>
-                <strong>{event.tool}</strong>
-                <p>{event.summary}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </details>
+      <AgentTrace trace={trace} />
 
       {resolution && approval ? (
         <SandboxResolution
@@ -382,17 +439,23 @@ function ExecutableProposal({ approval }: { approval: SearchActionApproval }) {
     <div className="executable-proposal">
       <dl>
         <div>
-          <dt>Executable rule</dt>
-          <dd>{proposal.type.replaceAll("_", " ")}</dd>
+          <dt>Regra executável</dt>
+          <dd>{proposalTypeLabels[proposal.type]}</dd>
         </div>
         <div>
-          <dt>Scope</dt>
-          <dd>Demo storefront only</dd>
+          <dt>Escopo</dt>
+          <dd>Sandbox de demonstração</dd>
         </div>
       </dl>
-      <p>
-        <code>{proposal.source}</code> → {proposal.targets.join(", ")}
-      </p>
+      <div className="rule-mapping" aria-label="Mapeamento recomendado">
+        <code>{proposal.source}</code>
+        <span aria-hidden="true">↓</span>
+        <div>
+          {proposal.targets.map((target) => (
+            <code key={target}>{target}</code>
+          ))}
+        </div>
+      </div>
       <small>{proposal.rationale}</small>
     </div>
   );
@@ -415,14 +478,18 @@ function ApprovalControl({
   const blocked = risk === "high";
 
   return (
-    <div className={`approval-control approval-control--${risk}`}>
-      <strong>Human approval required</strong>
+    <motion.div
+      animate={{ opacity: 1, y: 0 }}
+      className={`approval-control approval-control--${risk}`}
+      initial={{ opacity: 0, y: 8 }}
+    >
+      <strong>Aprovação necessária</strong>
       <p>
         {risk === "low"
-          ? "Low-risk rules can be applied after approval."
+          ? "Esta alteração foi classificada como baixo risco e pode ser testada no sandbox."
           : risk === "medium"
-            ? "Medium-risk preview. Review the rule carefully before applying it."
-            : "High-risk rules cannot be applied in the demo sandbox."}
+            ? "Esta alteração exige atenção. Revise a regra antes de testá-la."
+            : "Esta alteração foi bloqueada pela política de segurança."}
       </p>
       <button
         className="sandbox-apply-button"
@@ -431,13 +498,14 @@ function ApprovalControl({
         type="button"
       >
         {actionStatus === "applying"
-          ? "Applying in demo sandbox..."
+          ? "Aplicando no sandbox..."
           : blocked
-            ? "High risk · apply blocked"
-            : "Approve & apply in demo sandbox"}
+            ? "Aplicação bloqueada"
+            : "Aprovar e aplicar no sandbox"}
       </button>
+      <small>Nenhuma alteração será feita em uma loja real.</small>
       {actionError ? <p className="action-inline-error">{actionError}</p> : null}
-    </div>
+    </motion.div>
   );
 }
 
@@ -459,115 +527,248 @@ function SandboxResolution({
   onRevert,
 }: SandboxResolutionProps) {
   const { validation } = resolution;
-  const reverted = actionStatus === "reverted" && revertResult;
+  const reverted =
+    actionStatus === "reverted" && Boolean(revertResult?.revertConfirmed);
+  const displayedTrace = reverted && revertResult ? revertResult.trace : resolution.trace;
 
   return (
-    <section className="sandbox-resolution" aria-labelledby="sandbox-result-title">
+    <motion.section
+      animate={{ opacity: 1, y: 0 }}
+      aria-labelledby="sandbox-result-title"
+      className="sandbox-resolution"
+      initial={{ opacity: 0, y: 16 }}
+    >
       <div className="sandbox-resolution__heading">
         <div>
-          <p className="section-kicker">Act + validate</p>
+          <p className="section-kicker">Corrigir + validar</p>
           <h3 id="sandbox-result-title">
             {validation.validationPassed
-              ? "Search leak resolved in sandbox"
-              : "Sandbox validation did not pass"}
+              ? "Problema de busca corrigido no sandbox"
+              : "A validação do sandbox não foi aprovada"}
           </h3>
         </div>
-        <span className="sandbox-scope">Demo sandbox only</span>
+        <span className="sandbox-scope">Apenas sandbox de demonstração</span>
       </div>
 
       <div className="before-after">
-        <div className="search-state search-state--before">
-          <span>Before</span>
+        <motion.div
+          animate={{ opacity: 1, x: 0 }}
+          className="search-state search-state--before"
+          initial={{ opacity: 0, x: -10 }}
+        >
+          <span>Antes</span>
           <h4>{resolution.query}</h4>
-          <strong>
-            {validation.before.resultCount} {validation.before.resultCount === 1 ? "product" : "products"} found
-          </strong>
-        </div>
-        <div className="before-after__bridge" aria-hidden="true">
-          <span>Carcarah sandbox rule</span>
-          <strong>→</strong>
-        </div>
-        <div className="search-state search-state--after">
-          <span>After</span>
-          <h4>{resolution.query}</h4>
-          <strong>
-            {validation.after.resultCount} {validation.after.resultCount === 1 ? "product" : "products"} found
-          </strong>
-          <div className="resolved-products">
-            {resolution.afterProducts.map((product) => (
-              <article key={product.id}>
-                <div>
-                  <strong>{product.name}</strong>
-                  <span>{product.stock} in stock</span>
-                </div>
-                <p>{formatCurrency.format(product.price)}</p>
-              </article>
-            ))}
+          <div className="search-result-count">
+            <strong>{validation.before.resultCount}</strong>
+            <p>
+              {validation.before.resultCount === 1
+                ? "produto encontrado"
+                : "produtos encontrados"}
+            </p>
+          </div>
+        </motion.div>
+
+        <div className="before-after__bridge">
+          <span>Correção do Carcarah</span>
+          <div className="applied-rule">
+            <code>{resolution.change.source}</code>
+            <strong aria-hidden="true">→</strong>
+            <div>
+              {resolution.change.targets.map((target) => (
+                <code key={target}>{target}</code>
+              ))}
+            </div>
           </div>
         </div>
+
+        <motion.div
+          animate={{ opacity: 1, x: 0 }}
+          className="search-state search-state--after"
+          initial={{ opacity: 0, x: 10 }}
+          transition={{ delay: 0.08 }}
+        >
+          <span>Depois</span>
+          <h4>{resolution.query}</h4>
+          <div className="search-result-count search-result-count--success">
+            <strong>{validation.after.resultCount}</strong>
+            <p>
+              {validation.after.resultCount === 1
+                ? "produto encontrado"
+                : "produtos encontrados"}
+            </p>
+          </div>
+          <div className="resolved-products">
+            {resolution.afterProducts.map((product, index) => (
+              <motion.article
+                animate={{ opacity: 1, y: 0 }}
+                initial={{ opacity: 0, y: 6 }}
+                key={product.id}
+                transition={{ delay: 0.12 + index * 0.04 }}
+              >
+                <div>
+                  <strong>{product.name}</strong>
+                  <span>{product.stock} em estoque</span>
+                </div>
+                <p>{formatCurrency.format(product.price)}</p>
+              </motion.article>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       <div className="validation-summary">
         <div>
-          <span>Estimated GMV opportunity addressed</span>
+          <span>Oportunidade estimada de GMV</span>
           <strong>
-            {formatCurrency.format(
-              resolution.estimatedMonthlyOpportunityAddressed,
-            )} per month
+            {formatCurrency.format(resolution.estimatedMonthlyOpportunityAddressed)}
+            /mês
           </strong>
-          <p>This remains an estimate. No revenue is reported as recovered.</p>
+          <p>
+            Potencial associado a esta busca após a correção no sandbox.
+          </p>
         </div>
         <div>
-          <span>Regression check</span>
+          <span>Verificação de regressões</span>
           <strong>
             {validation.regressionDetected
-              ? "Related query degradation detected"
-              : "No healthy demo queries degraded"}
+              ? "Uma busca relacionada foi prejudicada"
+              : "Nenhuma busca saudável foi prejudicada"}
           </strong>
-          <p>{validation.regressionChecks.length} related healthy queries checked.</p>
+          <p>
+            {validation.regressionChecks.length}{" "}
+            {validation.regressionChecks.length === 1
+              ? "busca relacionada verificada."
+              : "buscas relacionadas verificadas."}
+          </p>
         </div>
       </div>
 
-      <ActionTrace trace={reverted ? revertResult.trace : resolution.trace} />
+      <ActionTrace
+        regressionDetected={validation.regressionDetected}
+        resultCount={validation.after.resultCount}
+        revertConfirmed={Boolean(revertResult?.revertConfirmed)}
+        trace={displayedTrace}
+      />
 
       <div className="revert-control">
-        {reverted ? (
-          <div className="revert-confirmation" role="status">
-            <strong>Sandbox change reverted</strong>
-            <p>
-              Original behavior restored with {revertResult.restoredResultCount}{" "}
-              {revertResult.restoredResultCount === 1 ? "result" : "results"}.
-            </p>
-          </div>
-        ) : (
-          <button
-            className="revert-button"
-            disabled={actionStatus === "reverting"}
-            onClick={() => onRevert(approval)}
-            type="button"
-          >
-            {actionStatus === "reverting"
-              ? "Reverting sandbox change..."
-              : "Revert sandbox change"}
-          </button>
-        )}
+        <AnimatePresence initial={false} mode="wait">
+          {reverted && revertResult ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="revert-confirmation"
+              initial={{ opacity: 0, y: 6 }}
+              key="reverted"
+              role="status"
+            >
+              <strong>Alteração revertida</strong>
+              <p>Comportamento original da busca restaurado.</p>
+            </motion.div>
+          ) : (
+            <motion.button
+              className="revert-button"
+              disabled={actionStatus === "reverting"}
+              key="revert-button"
+              onClick={() => onRevert(approval)}
+              type="button"
+              whileTap={{ scale: 0.985 }}
+            >
+              {actionStatus === "reverting"
+                ? "Revertendo alteração..."
+                : "Reverter alteração"}
+            </motion.button>
+          )}
+        </AnimatePresence>
         {actionError ? <p className="action-inline-error">{actionError}</p> : null}
       </div>
-    </section>
+    </motion.section>
   );
 }
 
-function ActionTrace({ trace }: { trace: SearchResolutionResponse["trace"] }) {
+const agentTraceSummaries: Record<
+  InvestigationTraceEvent["tool"],
+  string
+> = {
+  getLeakContext: "Contexto da oportunidade carregado.",
+  searchStorefront: "Resultado atual da busca verificado.",
+  searchCatalog: "Catálogo investigado com os termos analisados.",
+  getProductDetails: "Detalhes dos produtos relacionados verificados.",
+};
+
+function AgentTrace({ trace }: { trace: InvestigationTraceEvent[] }) {
+  return (
+    <details className="agent-trace">
+      <summary>Rastro da investigação · {trace.length} consultas reais</summary>
+      <ol>
+        {trace.map((event, index) => (
+          <li key={`${event.tool}-${index}`}>
+            <span aria-hidden="true">✓</span>
+            <div>
+              <strong>{event.tool}</strong>
+              <p>{agentTraceSummaries[event.tool]}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+interface ActionTraceProps {
+  trace: ActionTraceEvent[];
+  resultCount: number;
+  regressionDetected: boolean;
+  revertConfirmed: boolean;
+}
+
+function actionTraceLabel(
+  event: ActionTraceEvent,
+  resultCount: number,
+  regressionDetected: boolean,
+  revertConfirmed: boolean,
+): string {
+  const labels: Record<ActionTraceEvent["step"], string> = {
+    human_approval: "Aprovação recebida",
+    rule_validated: "Regra validada",
+    sandbox_applied: "Alteração aplicada no sandbox",
+    query_retested: "Busca original testada novamente",
+    results_measured: `${resultCount} ${
+      resultCount === 1 ? "produto encontrado" : "produtos encontrados"
+    }`,
+    regression_checked: regressionDetected
+      ? "Regressão detectada"
+      : "Nenhuma regressão detectada",
+    sandbox_reconstructed: "Estado do sandbox reconstruído",
+    sandbox_reverted: "Alteração removida do sandbox",
+    original_behavior_restored: revertConfirmed
+      ? "Comportamento original restaurado"
+      : "Restauração ainda não confirmada",
+  };
+
+  return labels[event.step];
+}
+
+function ActionTrace({
+  trace,
+  resultCount,
+  regressionDetected,
+  revertConfirmed,
+}: ActionTraceProps) {
   return (
     <details className="action-trace" open>
-      <summary>Action trace · {trace.length} verified operations</summary>
+      <summary>Rastro da ação · {trace.length} operações verificadas</summary>
       <ol>
         {trace.map((event, index) => (
           <li key={`${event.step}-${index}`}>
             <span aria-hidden="true">✓</span>
             <div>
-              <strong>{event.step.replaceAll("_", " ")}</strong>
-              <p>{event.summary}</p>
+              <strong>
+                {actionTraceLabel(
+                  event,
+                  resultCount,
+                  regressionDetected,
+                  revertConfirmed,
+                )}
+              </strong>
             </div>
           </li>
         ))}
