@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function SiteHeader() {
@@ -6,7 +7,13 @@ export function SiteHeader() {
       <div className="site-header__inner">
         <Link className="brand" href="/" aria-label="Painel do Carcarah">
           <span className="brand__mark" aria-hidden="true">
-            C
+            <Image
+              alt=""
+              height={24}
+              priority
+              src="/carcarah-mark.png"
+              width={24}
+            />
           </span>
           <span>Carcarah</span>
         </Link>
