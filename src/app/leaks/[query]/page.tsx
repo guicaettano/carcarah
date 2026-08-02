@@ -78,6 +78,11 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
         </div>
       </section>
 
+      <InvestigationPanel
+        query={leak.query}
+        agentConfigured={Boolean(process.env.OPENAI_API_KEY)}
+      />
+
       <section className="detail-section">
         <h2>Métricas da busca</h2>
         <div className="detail-metrics">
@@ -152,10 +157,6 @@ export default async function LeakDetailPage({ params }: LeakDetailPageProps) {
         </div>
       </section>
 
-      <InvestigationPanel
-        query={leak.query}
-        agentConfigured={Boolean(process.env.OPENAI_API_KEY)}
-      />
     </main>
   );
 }

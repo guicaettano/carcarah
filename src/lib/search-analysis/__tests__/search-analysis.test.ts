@@ -6,6 +6,7 @@ import {
   calculateConversionRate,
   calculateEstimatedOpportunity,
   detectRevenueLeaks,
+  summarizeAnalysis,
 } from "../index";
 import type { Product, SearchEvent } from "../types";
 
@@ -13,6 +14,26 @@ const products = productsData as Product[];
 const searchEvents = searchEventsData as SearchEvent[];
 
 describe("search analysis metrics", () => {
+  it("derives monitored searches from the real event volumes", () => {
+    const leaks = detectRevenueLeaks(searchEvents, products);
+    const summary = summarizeAnalysis(searchEvents, leaks);
+
+    expect(summary).toMatchObject({
+      searchesMonitored: 3463,
+      queriesAnalyzed: 22,
+    });
+  });
+
+  it("ignores negative volumes when aggregating monitored searches", () => {
+    const events: SearchEvent[] = [
+      { query: "one", searches: 120, clicks: 0, addToCarts: 0, purchases: 0 },
+      { query: "two", searches: 80, clicks: 0, addToCarts: 0, purchases: 0 },
+      { query: "invalid", searches: -10, clicks: 0, addToCarts: 0, purchases: 0 },
+    ];
+
+    expect(summarizeAnalysis(events, []).searchesMonitored).toBe(200);
+  });
+
   it("calculates conversion rate correctly", () => {
     const event: SearchEvent = {
       query: "test query",

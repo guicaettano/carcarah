@@ -1,6 +1,3 @@
-import Image from "next/image";
-
-import carcarahHero from "@/app/carcarah_hero.png";
 import { FeaturedLeak } from "@/components/featured-leak";
 import { LeakList } from "@/components/leak-list";
 import { SummaryMetrics } from "@/components/summary-metrics";
@@ -19,19 +16,9 @@ export default function DashboardPage() {
           <p className="section-kicker">Inteligência de busca</p>
           <h1>Encontre onde sua busca está deixando vendas escapar.</h1>
           <p>
-            O Carcarah monitora as buscas da loja, identifica oportunidades
-            perdidas e encontra a causa antes de recomendar uma correção.
+            O Carcarah investiga perdas na busca e propõe alterações seguras
+            quando encontra uma causa suportada pelo MVP.
           </p>
-        </div>
-        <div className="dashboard-hero__visual" aria-hidden="true">
-          <Image
-            alt=""
-            className="dashboard-hero__image"
-            placeholder="blur"
-            priority
-            sizes="(max-width: 900px) calc(100vw - 36px), 500px"
-            src={carcarahHero}
-          />
         </div>
       </section>
 
@@ -60,8 +47,8 @@ export default function DashboardPage() {
       </section>
 
       <p className="data-disclaimer">
-        Dados de demonstração. A oportunidade de GMV é uma estimativa, não uma
-        receita recuperada.
+        Dados sintéticos usados para demonstrar o fluxo agentivo. A oportunidade
+        de GMV é uma estimativa, não uma receita recuperada.
       </p>
     </main>
   );

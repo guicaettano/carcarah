@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 
 import type {
@@ -15,6 +16,8 @@ import type {
   SearchRevertResponse,
 } from "@/lib/search-actions/types";
 import { formatCurrency } from "@/lib/formatters";
+import { buildAgentActivity } from "@/lib/investigation-agent/activity";
+import { persistDemoSearchConfiguration } from "@/lib/storefront-demo/session";
 
 type InvestigationState =
   | { status: "idle" }
@@ -178,6 +181,7 @@ export function InvestigationPanel({
 
       setResolution(body);
       setActionStatus("applied");
+      persistDemoSearchConfiguration(body.configuration);
     } catch (error) {
       setActionStatus("idle");
       setActionError(
@@ -213,6 +217,7 @@ export function InvestigationPanel({
       setRevertResult(body);
       if (body.revertConfirmed) {
         setActionStatus("reverted");
+        persistDemoSearchConfiguration(body.configuration);
       } else {
         setActionStatus("applied");
         setActionError("A reversão foi executada, mas a restauração não foi confirmada.");
@@ -232,12 +237,30 @@ export function InvestigationPanel({
   return (
     <section className="investigation-section" aria-labelledby="investigation-title">
       <div className="investigation-section__heading">
-        <div>
-          <p className="section-kicker">Investigação</p>
+        <div className="agent-introduction">
+          <p className="section-kicker">Carcarah Agent</p>
           <h2 id="investigation-title">Análise do Carcarah</h2>
           <p>
-            O Carcarah analisa o desempenho da busca, testa o resultado atual e
-            investiga o catálogo antes de recomendar qualquer alteração.
+            O Carcarah investiga diferentes causas de perda e propõe uma regra
+            de busca apenas quando encontra uma correção segura e suportada.
+          </p>
+          <div className="agent-route" aria-label="Como o Carcarah investiga">
+            <div className="agent-route__heading">
+              <strong>Como o Carcarah investiga</strong>
+              <span>O agente irá</span>
+            </div>
+            <ol>
+              <li>Métricas da busca</li>
+              <li>Resultado atual</li>
+              <li>Catálogo</li>
+              <li>Produtos</li>
+              <li>Diagnóstico</li>
+              <li>Aprovação + validação</li>
+            </ol>
+          </div>
+          <p className="agent-mvp-limit">
+            Neste MVP, ações executáveis são limitadas a regras seguras de busca
+            no sandbox.
           </p>
         </div>
         <button
@@ -273,7 +296,13 @@ export function InvestigationPanel({
               role="status"
             >
               <span className="investigation-progress__dot" aria-hidden="true" />
-              Analisando desempenho, resultados atuais e catálogo.
+              <div>
+                <strong>Carcarah está investigando</strong>
+                <p>
+                  Consultando a operação e reunindo evidências antes de
+                  recomendar uma alteração.
+                </p>
+              </div>
             </motion.div>
           ) : null}
 
@@ -339,85 +368,97 @@ function InvestigationReport({
   return (
     <div className="investigation-report">
       <p className="investigation-report__kicker">Resultado da investigação</p>
-      <div className="investigation-report__summary">
-        <div>
-          <span>Causa identificada</span>
-          <strong>{rootCauseLabels[investigation.rootCause]}</strong>
-        </div>
-        <div>
-          <span>Confiança</span>
-          <strong>{confidenceLabel(investigation.confidence)}</strong>
-        </div>
-        <div>
-          <span>Risco da ação</span>
-          <strong>{riskLabels[investigation.risk]}</strong>
-        </div>
-      </div>
-
-      <div className="investigation-report__diagnosis">
-        <h3>Diagnóstico</h3>
-        <p>{investigation.diagnosis}</p>
-      </div>
-
-      <div className="investigation-report__grid">
-        <div>
-          <h3>Evidências</h3>
-          <ol className="evidence-list">
-            {investigation.evidence.map((item, index) => (
-              <li key={`${item.type}-${index}`}>
-                <span>{evidenceLabels[item.type]}</span>
-                <p>{item.description}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div>
-          <h3>Ação recomendada</h3>
-          <div className="recommendation-card">
-            <strong>{actionLabels[recommendation.action]}</strong>
-            {approval ? (
-              <ExecutableProposal approval={approval} />
-            ) : recommendation.action === "boost_products" ? (
-              <p>Revise o ajuste de ordenação fora deste sandbox.</p>
-            ) : (
-              <p>O Carcarah não encontrou uma regra de busca segura para aplicar.</p>
-            )}
-            <span>
-              Esta é apenas uma recomendação. Nada muda sem aprovação humana.
-            </span>
-          </div>
-
-          {approval && !resolution ? (
-            <ApprovalControl
-              actionError={actionError}
-              actionStatus={actionStatus}
-              approval={approval}
-              onApply={onApply}
-            />
-          ) : null}
-        </div>
-      </div>
-
-      {investigation.relatedProducts.length > 0 ? (
-        <div className="related-products">
-          <h3>Produtos relacionados encontrados</h3>
-          <div className="related-products__grid">
-            {investigation.relatedProducts.map((product) => (
-              <article key={product.id}>
-                <span>{product.id}</span>
-                <strong>{product.name}</strong>
-                <p>
-                  {formatCurrency.format(product.price)} · {product.stock} em
-                  estoque
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <AgentTrace trace={trace} />
+
+      {trace.length > 0 ? <AgentFlowConnector /> : null}
+
+      <section className="agent-evidence" aria-labelledby="agent-evidence-title">
+        <p className="agent-stage-label">Evidências coletadas</p>
+        <h3 id="agent-evidence-title">O que as ferramentas observaram</h3>
+        <ol className="evidence-list">
+          {investigation.evidence.map((item, index) => (
+            <li key={`${item.type}-${index}`}>
+              <span>{evidenceLabels[item.type]}</span>
+              <p>{item.description}</p>
+            </li>
+          ))}
+        </ol>
+
+        {investigation.relatedProducts.length > 0 ? (
+          <div className="related-products">
+            <h3>Produtos relacionados encontrados</h3>
+            <div className="related-products__grid">
+              {investigation.relatedProducts.map((product) => (
+                <article key={product.id}>
+                  <span>{product.id}</span>
+                  <strong>{product.name}</strong>
+                  <p>
+                    {formatCurrency.format(product.price)}, {product.stock} em
+                    estoque
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <AgentFlowConnector />
+
+      <section
+        className="investigation-report__diagnosis"
+        aria-labelledby="agent-diagnosis-title"
+      >
+        <p className="agent-stage-label">Causa identificada</p>
+        <div className="agent-cause">
+          <strong>{rootCauseLabels[investigation.rootCause]}</strong>
+          <span>{confidenceLabel(investigation.confidence)} de confiança</span>
+          <span>Risco {riskLabels[investigation.risk].toLowerCase()}</span>
+        </div>
+        <p className="agent-conclusion">
+          Conclusão do agente baseada nas evidências acima.
+        </p>
+        <h3 id="agent-diagnosis-title">Diagnóstico</h3>
+        <p>{investigation.diagnosis}</p>
+      </section>
+
+      <AgentFlowConnector />
+
+      <section
+        className="agent-decision"
+        aria-labelledby="agent-decision-title"
+      >
+        <p className="agent-stage-label">Ação proposta</p>
+        <h3 id="agent-decision-title">Ação proposta pelo Carcarah</h3>
+        <div className="recommendation-card">
+          <strong>{actionLabels[recommendation.action]}</strong>
+          {approval ? (
+            <ExecutableProposal approval={approval} />
+          ) : recommendation.action === "boost_products" ? (
+            <p>Ajustes de ordenação não são executados neste MVP.</p>
+          ) : (
+            <p>O Carcarah não encontrou uma regra de busca segura para aplicar.</p>
+          )}
+          <span>
+            Nada muda sem aprovação humana. Neste MVP, o sandbox executa apenas
+            regras seguras de busca.
+          </span>
+        </div>
+
+        <AgentHumanHandoff
+          actionStatus={actionStatus}
+          approvalRequired={Boolean(approval)}
+        />
+
+        {approval && !resolution ? (
+          <ApprovalControl
+            actionError={actionError}
+            actionStatus={actionStatus}
+            approval={approval}
+            onApply={onApply}
+          />
+        ) : null}
+      </section>
 
       {resolution && approval ? (
         <SandboxResolution
@@ -429,6 +470,64 @@ function InvestigationReport({
           revertResult={revertResult}
         />
       ) : null}
+    </div>
+  );
+}
+
+function AgentFlowConnector() {
+  return (
+    <div className="agent-flow-connector" aria-hidden="true">
+      <span>↓</span>
+    </div>
+  );
+}
+
+function AgentHumanHandoff({
+  actionStatus,
+  approvalRequired,
+}: {
+  actionStatus: ActionStatus;
+  approvalRequired: boolean;
+}) {
+  const approvalReceived = actionStatus !== "idle";
+  const activeAgentStatus =
+    actionStatus === "applying"
+      ? "Aplicando e validando..."
+      : actionStatus === "reverting"
+        ? "Revertendo a alteração..."
+        : actionStatus === "applied"
+          ? "Aplicou e validou no sandbox ✓"
+          : actionStatus === "reverted"
+            ? "Reversão confirmada ✓"
+            : null;
+
+  return (
+    <div className="agent-human-handoff" aria-label="Separação entre agente e humano">
+      <div>
+        <span>Carcarah</span>
+        <ul>
+          <li>Investigou ✓</li>
+          <li>Diagnosticou ✓</li>
+          <li>
+            {approvalRequired
+              ? "Propôs uma ação ✓"
+              : "Concluiu sem ação executável ✓"}
+          </li>
+          {activeAgentStatus ? (
+            <li className="agent-human-handoff__active">{activeAgentStatus}</li>
+          ) : null}
+        </ul>
+      </div>
+      <div>
+        <span>Humano</span>
+        <strong>
+          {approvalRequired
+            ? approvalReceived
+              ? "Aprovação recebida ✓"
+              : "Aprovação necessária"
+            : "Nenhuma aprovação necessária"}
+        </strong>
+      </div>
     </div>
   );
 }
@@ -483,10 +582,12 @@ function ApprovalControl({
       className={`approval-control approval-control--${risk}`}
       initial={{ opacity: 0, y: 8 }}
     >
-      <strong>Aprovação necessária</strong>
+      <strong>Aprovação humana</strong>
       <p>
-        {risk === "low"
-          ? "Esta alteração foi classificada como baixo risco e pode ser testada no sandbox."
+        {actionStatus === "applying"
+          ? "O Carcarah recebeu a aprovação e está aplicando e validando a alteração no sandbox."
+          : risk === "low"
+            ? "O Carcarah concluiu a investigação e propôs uma alteração de baixo risco."
           : risk === "medium"
             ? "Esta alteração exige atenção. Revise a regra antes de testá-la."
             : "Esta alteração foi bloqueada pela política de segurança."}
@@ -503,7 +604,7 @@ function ApprovalControl({
             ? "Aplicação bloqueada"
             : "Aprovar e aplicar no sandbox"}
       </button>
-      <small>Nenhuma alteração será feita em uma loja real.</small>
+      <small>Nenhuma alteração é executada sem aprovação.</small>
       {actionError ? <p className="action-inline-error">{actionError}</p> : null}
     </motion.div>
   );
@@ -569,7 +670,7 @@ function SandboxResolution({
         </motion.div>
 
         <div className="before-after__bridge">
-          <span>Correção do Carcarah</span>
+          <span>Ação do Carcarah</span>
           <div className="applied-rule">
             <code>{resolution.change.source}</code>
             <strong aria-hidden="true">→</strong>
@@ -579,6 +680,7 @@ function SandboxResolution({
               ))}
             </div>
           </div>
+          <small>Regra aplicada pelo agente após aprovação.</small>
         </div>
 
         <motion.div
@@ -651,6 +753,14 @@ function SandboxResolution({
       />
 
       <div className="revert-control">
+        {actionStatus === "applied" && !reverted ? (
+          <Link
+            className="storefront-link"
+            href={`/storefront?q=${encodeURIComponent(resolution.query)}&autosearch=1`}
+          >
+            Ver resultado na loja →
+          </Link>
+        ) : null}
         <AnimatePresence initial={false} mode="wait">
           {reverted && revertResult ? (
             <motion.div
@@ -684,32 +794,47 @@ function SandboxResolution({
   );
 }
 
-const agentTraceSummaries: Record<
-  InvestigationTraceEvent["tool"],
-  string
-> = {
-  getLeakContext: "Contexto da oportunidade carregado.",
-  searchStorefront: "Resultado atual da busca verificado.",
-  searchCatalog: "Catálogo investigado com os termos analisados.",
-  getProductDetails: "Detalhes dos produtos relacionados verificados.",
-};
-
 function AgentTrace({ trace }: { trace: InvestigationTraceEvent[] }) {
+  const activity = buildAgentActivity(trace);
+  if (activity.length === 0) return null;
+
   return (
-    <details className="agent-trace">
-      <summary>Rastro da investigação · {trace.length} consultas reais</summary>
+    <section className="agent-trace" aria-labelledby="agent-activity-title">
+      <header className="agent-trace__heading">
+        <p className="agent-stage-label">Atividade do agente</p>
+        <h3 id="agent-activity-title">
+          {activity.length}{" "}
+          {activity.length === 1
+            ? "ferramenta executada"
+            : "ferramentas executadas"}
+        </h3>
+        <p>Chamadas retornadas pelo runtime desta investigação.</p>
+      </header>
       <ol>
-        {trace.map((event, index) => (
-          <li key={`${event.tool}-${index}`}>
-            <span aria-hidden="true">✓</span>
+        {activity.map((item, index) => (
+          <li key={`${item.tool}-${index}`}>
+            <span className="agent-trace__check" aria-hidden="true">
+              ✓
+            </span>
             <div>
-              <strong>{event.tool}</strong>
-              <p>{agentTraceSummaries[event.tool]}</p>
+              <strong>{item.label}</strong>
+              <code>{item.tool}</code>
+              <p>{item.summary}</p>
+              {item.terms.length > 0 ? (
+                <div
+                  className="agent-trace__terms"
+                  aria-label="Termos pesquisados"
+                >
+                  {item.terms.map((term) => (
+                    <code key={term}>{term}</code>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </li>
         ))}
       </ol>
-    </details>
+    </section>
   );
 }
 
@@ -727,12 +852,12 @@ function actionTraceLabel(
   revertConfirmed: boolean,
 ): string {
   const labels: Record<ActionTraceEvent["step"], string> = {
-    human_approval: "Aprovação recebida",
+    human_approval: "Aprovação humana recebida",
     rule_validated: "Regra validada",
     sandbox_applied: "Alteração aplicada no sandbox",
-    query_retested: "Busca original testada novamente",
+    query_retested: "Busca original executada novamente",
     results_measured: `${resultCount} ${
-      resultCount === 1 ? "produto encontrado" : "produtos encontrados"
+      resultCount === 1 ? "produto recuperado" : "produtos recuperados"
     }`,
     regression_checked: regressionDetected
       ? "Regressão detectada"
@@ -753,9 +878,16 @@ function ActionTrace({
   regressionDetected,
   revertConfirmed,
 }: ActionTraceProps) {
+  if (trace.length === 0) return null;
+
   return (
-    <details className="action-trace" open>
-      <summary>Rastro da ação · {trace.length} operações verificadas</summary>
+    <section className="action-trace" aria-labelledby="agent-validation-title">
+      <header className="action-trace__heading">
+        <p className="agent-stage-label">Validação do agente</p>
+        <h3 id="agent-validation-title">
+          {trace.length} operações verificadas
+        </h3>
+      </header>
       <ol>
         {trace.map((event, index) => (
           <li key={`${event.step}-${index}`}>
@@ -769,10 +901,12 @@ function ActionTrace({
                   revertConfirmed,
                 )}
               </strong>
+              <code>{event.step}</code>
+              <p>{event.summary}</p>
             </div>
           </li>
         ))}
       </ol>
-    </details>
+    </section>
   );
 }

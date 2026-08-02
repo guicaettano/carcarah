@@ -16,6 +16,7 @@ import type {
   ActionTraceEvent,
   ResolvedProduct,
   SearchActionProposal,
+  SearchActionRisk,
   SearchResolutionResponse,
   SearchRevertResponse,
 } from "./types";
@@ -29,6 +30,12 @@ export class SearchActionRiskError extends Error {
     this.name = "SearchActionRiskError";
   }
 }
+
+const riskLabels: Record<SearchActionRisk, string> = {
+  low: "baixo",
+  medium: "médio",
+  high: "alto",
+};
 
 function detectedLeak(query: string) {
   return detectRevenueLeaks(searchEvents, products).find(
@@ -91,7 +98,7 @@ export function executeApprovedSearchAction({
   const trace: ActionTraceEvent[] = [
     {
       step: "human_approval",
-      summary: "Human approval received for a demo sandbox change.",
+      summary: "Aprovação humana recebida para uma alteração no sandbox de demonstração.",
     },
   ];
   const { proposal } = authorizedProposal(
@@ -103,14 +110,14 @@ export function executeApprovedSearchAction({
   if (effectiveRisk === "high") throw new SearchActionRiskError();
   trace.push({
     step: "rule_validated",
-    summary: `Search rule validated with ${effectiveRisk} effective risk.`,
+    summary: `Regra de busca validada com risco efetivo ${riskLabels[effectiveRisk]}.`,
   });
 
   const originalConfig = createEmptySearchConfiguration();
   const applied = applySearchRule(proposal, originalConfig);
   trace.push({
     step: "sandbox_applied",
-    summary: `Rule ${applied.change.ruleId} added to the ${applied.change.collection} sandbox collection.`,
+    summary: `Regra ${applied.change.ruleId} adicionada à coleção ${applied.change.collection} do sandbox.`,
   });
 
   const validation = validateSearchChange(
@@ -121,17 +128,17 @@ export function executeApprovedSearchAction({
   );
   trace.push({
     step: "query_retested",
-    summary: "Original shopper query retested before and after the sandbox rule.",
+    summary: "Busca original do cliente testada antes e depois da regra no sandbox.",
   });
   trace.push({
     step: "results_measured",
-    summary: `${validation.after.resultCount} ${validation.after.resultCount === 1 ? "product" : "products"} returned after the sandbox change, including ${validation.newRelevantProducts.length} new ${validation.newRelevantProducts.length === 1 ? "result" : "results"}.`,
+    summary: `${validation.after.resultCount} ${validation.after.resultCount === 1 ? "produto retornado" : "produtos retornados"} após a alteração no sandbox, incluindo ${validation.newRelevantProducts.length} ${validation.newRelevantProducts.length === 1 ? "novo resultado" : "novos resultados"}.`,
   });
   trace.push({
     step: "regression_checked",
     summary: validation.regressionDetected
-      ? `${validation.regressionChecks.length} related healthy demo queries checked; a regression was detected.`
-      : `${validation.regressionChecks.length} related healthy demo queries checked; none degraded.`,
+      ? `${validation.regressionChecks.length} buscas saudáveis relacionadas verificadas; uma regressão foi detectada.`
+      : `${validation.regressionChecks.length} buscas saudáveis relacionadas verificadas; nenhuma foi prejudicada.`,
   });
 
   return {
@@ -176,7 +183,7 @@ export function revertApprovedSearchAction({
   const trace: ActionTraceEvent[] = [
     {
       step: "human_approval",
-      summary: "Human revert request received for the demo sandbox.",
+      summary: "Solicitação humana de reversão recebida para o sandbox de demonstração.",
     },
   ];
   const originalConfig = createEmptySearchConfiguration();
@@ -186,13 +193,13 @@ export function revertApprovedSearchAction({
   }
   trace.push({
     step: "sandbox_reconstructed",
-    summary: `Sandbox state reconstructed with rule ${ruleId}.`,
+    summary: `Estado do sandbox reconstruído com a regra ${ruleId}.`,
   });
 
   const reverted = revertSearchRule(reconstructed.config, ruleId);
   trace.push({
     step: "sandbox_reverted",
-    summary: `Rule ${ruleId} removed from the demo sandbox.`,
+    summary: `Regra ${ruleId} removida do sandbox de demonstração.`,
   });
 
   const originalResult = searchStorefront(query, products, originalConfig);
@@ -204,8 +211,8 @@ export function revertApprovedSearchAction({
   trace.push({
     step: "original_behavior_restored",
     summary: revertConfirmed
-      ? `Original storefront behavior restored with ${restoredResult.total} results.`
-      : "The reverted sandbox did not match the original storefront behavior.",
+      ? `Comportamento original da loja restaurado com ${restoredResult.total} resultados.`
+      : "O sandbox revertido não corresponde ao comportamento original da loja.",
   });
 
   return {
