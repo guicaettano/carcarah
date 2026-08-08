@@ -41,6 +41,10 @@ Instead of only showing analytics, Carcarah **investigates** the search failure 
 
 ## Before → After
 
+<p align="center">
+  <img src="docs/carcarah-demo.gif" alt="Carcarah before and after demo" width="900" />
+</p>
+
 ```
 Search: "moletom canguru preto"
 
