@@ -11,13 +11,15 @@ export default function DashboardPage() {
 
   return (
     <main className="page-shell">
-      <section className="dashboard-intro">
-        <p className="section-kicker">Inteligência de busca</p>
-        <h1>Encontre onde sua busca está deixando vendas escapar.</h1>
-        <p>
-          O Carcarah monitora as buscas da loja, identifica oportunidades
-          perdidas e encontra a causa antes de recomendar uma correção.
-        </p>
+      <section className="dashboard-hero">
+        <div className="dashboard-intro">
+          <p className="section-kicker">Inteligência de busca</p>
+          <h1>Encontre onde sua busca está deixando vendas escapar.</h1>
+          <p>
+            O Carcarah investiga perdas na busca e propõe alterações seguras
+            quando encontra uma causa suportada pelo MVP.
+          </p>
+        </div>
       </section>
 
       <SummaryMetrics summary={summary} />
@@ -45,8 +47,8 @@ export default function DashboardPage() {
       </section>
 
       <p className="data-disclaimer">
-        Dados de demonstração. A oportunidade de GMV é uma estimativa, não uma
-        receita recuperada.
+        Dados sintéticos usados para demonstrar o fluxo agentivo. A oportunidade
+        de GMV é uma estimativa, não uma receita recuperada.
       </p>
     </main>
   );

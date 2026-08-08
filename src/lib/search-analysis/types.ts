@@ -57,6 +57,7 @@ export interface RevenueLeak {
 
 export interface AnalysisSummary {
   queriesAnalyzed: number;
+  searchesMonitored: number;
   leaksDetected: number;
   estimatedGmvOpportunity: number;
   zeroConversionQueries: number;

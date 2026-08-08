@@ -94,7 +94,8 @@ Return a corrected investigation using only evidence already collected.
 - actionProposal targets must be supported by the allowed searched terms
 - actionProposal source must be a contiguous segment of the shopper query
 - if no grounded executable recommendation is possible, use no_action with null sourceTerm, targetTerms, and actionProposal
-- never invent or broaden evidence`,
+- never invent or broaden evidence
+- write every user-facing field in Brazilian Portuguese, using sentence case`,
     prompt: JSON.stringify({
       shopperQuery: query,
       allowedSearchedTerms: searchedTerms,
@@ -142,6 +143,7 @@ Constraints:
 - actionProposal scope is demo_storefront and reversible is true
 - never call or simulate a write tool; human approval happens after this run
 - if evidence is insufficient, use unknown and no_action
+- write diagnosis and actionProposal.rationale in Brazilian Portuguese, using sentence case and an operational tone
 - stop after the structured investigation is complete`,
     prompt: `Investigate this detected revenue leak: ${query}`,
     tools,

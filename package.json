@@ -1,6 +1,15 @@
 {
   "name": "carcarah",
   "version": "0.1.0",
+  "description": "AI Agent for finding and recovering lost e-commerce search opportunities",
+  "keywords": [
+    "ai-agent",
+    "ecommerce",
+    "search",
+    "revenue-recovery",
+    "openai",
+    "autonomous-agent"
+  ],
   "private": true,
   "engines": {
     "node": ">=22"

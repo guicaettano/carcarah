@@ -4,7 +4,11 @@ import type { AnalysisSummary } from "@/lib/search-analysis";
 export function SummaryMetrics({ summary }: { summary: AnalysisSummary }) {
   const metrics = [
     {
-      label: "Buscas analisadas",
+      label: "Buscas monitoradas",
+      value: formatNumber.format(summary.searchesMonitored),
+    },
+    {
+      label: "Consultas únicas",
       value: formatNumber.format(summary.queriesAnalyzed),
     },
     {
@@ -16,23 +20,22 @@ export function SummaryMetrics({ summary }: { summary: AnalysisSummary }) {
       value: formatCurrency.format(summary.estimatedGmvOpportunity),
       note: "/mês",
     },
-    {
-      label: "Buscas sem conversão",
-      value: formatNumber.format(summary.zeroConversionQueries),
-    },
   ];
 
   return (
-    <section aria-label="Resumo da análise" className="metrics">
-      {metrics.map((metric) => (
-        <div className="metric" key={metric.label}>
-          <p className="metric__label">{metric.label}</p>
-          <p className="metric__value">
-            {metric.value}
-            {metric.note ? <span>{metric.note}</span> : null}
-          </p>
-        </div>
-      ))}
-    </section>
+    <div className="metrics-block">
+      <section aria-label="Resumo da análise" className="metrics">
+        {metrics.map((metric) => (
+          <div className="metric" key={metric.label}>
+            <p className="metric__label">{metric.label}</p>
+            <p className="metric__value">
+              {metric.value}
+              {metric.note ? <span>{metric.note}</span> : null}
+            </p>
+          </div>
+        ))}
+      </section>
+      <p className="metrics-block__note">Dados sintéticos de demonstração.</p>
+    </div>
   );
 }

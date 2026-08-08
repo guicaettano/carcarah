@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "geist/font/mono";
 import "geist/font/sans";
 
+import { ConditionalSiteHeader } from "@/components/conditional-site-header";
+import { DemoResetControl } from "@/components/demo-reset-control";
 import { MotionProvider } from "@/components/motion-provider";
-import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,8 +19,9 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <MotionProvider>
-          <SiteHeader />
+          <ConditionalSiteHeader />
           {children}
+          <DemoResetControl />
         </MotionProvider>
       </body>
     </html>

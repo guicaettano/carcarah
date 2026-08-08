@@ -10,7 +10,8 @@ import { SeverityBadge } from "./severity-badge";
 
 export function FeaturedLeak({ leak }: { leak: RevenueLeak }) {
   return (
-    <Link
+    <div className="featured-leak-container">
+      <Link
         aria-label={`Ver detalhes da busca ${leak.query}`}
         className="featured-leak"
         href={`/leaks/${encodeURIComponent(leak.query)}`}
@@ -47,6 +48,14 @@ export function FeaturedLeak({ leak }: { leak: RevenueLeak }) {
           </span>
           <span className="text-link">Ver detalhes →</span>
         </div>
-    </Link>
+      </Link>
+      
+      <Link
+        className="storefront-before-cta"
+        href={`/storefront?q=${encodeURIComponent(leak.query)}&autosearch=1`}
+      >
+        Ver problema na loja ↗
+      </Link>
+    </div>
   );
 }

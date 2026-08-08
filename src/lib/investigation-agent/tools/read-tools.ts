@@ -88,7 +88,7 @@ export function createReadTools(
           state,
           "getLeakContext",
           { query: inputQuery },
-          `Leak context inspected: ${leak.searches} searches, ${formatPercentage(leak.conversionRate)} conversion, ${formatPercentage(leak.baselineConversionRate)} baseline, ${formatCurrency.format(leak.estimatedMonthlyOpportunity)} estimated opportunity.`,
+          `Contexto verificado: ${leak.searches} buscas, ${formatPercentage(leak.conversionRate)} de conversão, referência de ${formatPercentage(leak.baselineConversionRate)} e oportunidade estimada de ${formatCurrency.format(leak.estimatedMonthlyOpportunity)}.`,
         );
         return context;
       },
@@ -115,7 +115,7 @@ export function createReadTools(
           state,
           "searchStorefront",
           { query: inputQuery },
-          `Storefront search tested: ${result.total} ${result.total === 1 ? "result" : "results"} returned for the shopper query.`,
+          `Busca atual testada: ${result.total} ${result.total === 1 ? "resultado retornado" : "resultados retornados"} para o termo usado pelo cliente.`,
         );
         return output;
       },
@@ -153,7 +153,7 @@ export function createReadTools(
           state,
           "searchCatalog",
           { searchTerms },
-          `Catalog searched with ${searchTerms.map((term) => `"${term}"`).join(", ")}: ${matches.length} ${matches.length === 1 ? "candidate" : "candidates"} found.`,
+          `Catálogo pesquisado com ${searchTerms.map((term) => `“${term}”`).join(", ")}: ${matches.length} ${matches.length === 1 ? "produto candidato encontrado" : "produtos candidatos encontrados"}.`,
         );
         return output;
       },
@@ -187,7 +187,7 @@ export function createReadTools(
           state,
           "getProductDetails",
           { productIds },
-          `${foundProducts.length} candidate ${foundProducts.length === 1 ? "product" : "products"} inspected: ${foundProducts.map((product) => product.name).join(", ")}.`,
+          `${foundProducts.length} ${foundProducts.length === 1 ? "produto candidato verificado" : "produtos candidatos verificados"}: ${foundProducts.map((product) => product.name).join(", ")}.`,
         );
         return { products: foundProducts };
       },

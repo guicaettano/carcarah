@@ -150,6 +150,10 @@ export function summarizeAnalysis(
 ): AnalysisSummary {
   return {
     queriesAnalyzed: searchEvents.length,
+    searchesMonitored: searchEvents.reduce(
+      (total, event) => total + Math.max(0, event.searches),
+      0,
+    ),
     leaksDetected: leaks.length,
     estimatedGmvOpportunity: leaks.reduce(
       (total, leak) => total + leak.estimatedMonthlyOpportunity,
