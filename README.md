@@ -2,7 +2,7 @@
 
 An AI agent that finds and recovers lost e-commerce search opportunities.
 
-Detect revenue leaks, investigate root causes using real tools, propose safe search fixes, require human approval, and validate the impact before deployment.
+Carcarah helps e-commerce teams automatically discover search queries that are silently losing sales and recover them through safe, validated AI-assisted search optimization.
 
 ## The problem
 
@@ -184,6 +184,18 @@ flowchart TD
     
     Apply --> Revert[Revert]
 ```
+## Key differentiators
+
+Unlike traditional search analytics tools, Carcarah:
+
+- investigates the root cause automatically,
+- uses real tool execution instead of static recommendations,
+- separates investigation from execution,
+- requires explicit human approval,
+- validates changes before and after deployment,
+- and supports instant rollback.
+
+It is designed as an autonomous operational workflow rather than a reporting dashboard.
 
 ## Tech stack
 
@@ -197,7 +209,7 @@ flowchart TD
 ### AI
 - Vercel AI SDK
 - OpenAI Responses API
-- GPT-4o
+- GPT-5.6
 - Zod structured output
 - Tool calling
 
@@ -209,20 +221,21 @@ flowchart TD
 
 ## Why this is an AI agent
 
-The detector itself is deterministic.
+Carcarah is not a dashboard with AI-generated recommendations.
 
-The **investigation is autonomous.**
+The detector identifies opportunities deterministically, but the investigation is autonomous.
 
-Carcarah must:
+The agent must:
+
 - inspect analytics,
-- test the current search behavior,
+- test the storefront,
 - generate vocabulary hypotheses,
 - explore the catalog,
 - inspect products,
 - produce a grounded diagnosis,
-- and propose a safe action.
+- and propose a safe, reversible action.
 
-The interface displays only real backend tool executions, not a pre-scripted animation.
+Every recommendation is backed by real tool execution, and every action requires human approval before being validated through regression checks.
 
 ## Running locally
 
