@@ -23,7 +23,7 @@ import {
   validateAndGroundInvestigationResult,
 } from "./validation";
 
-export const INVESTIGATION_MODEL = "gpt-5.6-sol";
+export const INVESTIGATION_MODEL = "gpt-5.6-terra";
 
 export class AgentRuntimeNotConfiguredError extends Error {
   constructor() {
