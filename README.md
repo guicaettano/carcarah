@@ -1,97 +1,116 @@
 # Carcarah
 
-**AI Agent for Finding and Recovering Lost E-commerce Search Opportunities**
+An AI agent that finds and recovers lost e-commerce search opportunities.
 
-> Autonomous search intelligence that detects revenue leaks, investigates root causes, and proposes safe, validated fixes — all with human approval.
+Detect revenue leaks, investigate root causes using real tools, propose safe search fixes, require human approval, and validate the impact before deployment.
 
-[![Demo](https://img.shields.io/badge/🔴_Live_Demo-Vercel-black?style=for-the-badge)](https://carcarah.vercel.app)
-[![Video](https://img.shields.io/badge/📹_Demo_Video-Watch-orange?style=for-the-badge)](#)
-[![Code](https://img.shields.io/badge/💻_Source_Code-GitHub-blue?style=for-the-badge)](https://github.com/your-repo/carcarah)
+## The problem
 
----
+A customer searches for **"moletom canguru preto"**.
 
-## The Problem
+The store already has relevant black hoodies in stock, but the search engine returns **0 products found** because the catalog uses different vocabulary.
 
-E-commerce search is broken. Customers search using their own vocabulary — "moletom canguru preto" — but find nothing because the catalog uses different terms like "hoodie."
+That means:
+- high search demand,
+- zero purchases,
+- and revenue opportunities that often go unnoticed.
 
-**The result?** Zero conversions. Lost revenue. Frustrated customers.
+Most e-commerce teams discover these problems manually, after conversion has already been lost.
 
-Traditional solutions require manual synonym rules, expensive consultants, or constant catalog updates. Most companies don't even know these leaks exist.
+## The solution
 
----
+**Carcarah** is an autonomous AI agent for e-commerce search recovery.
 
-## The Solution: Carcarah
+It performs the complete recovery loop:
 
-Carcarah is an **autonomous AI agent** that:
+```
+Detect
+   ↓
+Investigate
+   ↓
+Propose
+   ↓
+Human approval
+   ↓
+Apply
+   ↓
+Validate
+```
 
-1. **Detects** revenue leaks automatically from search data
-2. **Investigates** root causes using real-time tools and semantic reasoning
-3. **Proposes** safe, reversible search fixes with confidence scores
-4. **Validates** changes before showing results
-5. **Requires human approval** for every action
+Instead of only showing analytics, Carcarah **investigates** the search failure using real tools, explores the catalog, identifies the root cause, proposes a reversible search rule, and validates the result after the change is applied.
 
-### Before → After
+## Before → After
 
 ```
 Search: "moletom canguru preto"
 
 ❌ BEFORE
-└─ 0 products found
-   187 searches → 0 purchases
-   Estimated lost revenue: R$ 8,400/month
+0 products found
+187 searches
+0 purchases
 
         ↓ Carcarah investigates ↓
-        
-✅ AFTER  
-└─ 2 products found
-   Rule: "canguru" → "hoodie"
-   Validated with 0 regressions
+
+✅ AFTER
+Relevant hoodies found
+Synonym rule: "canguru" → "hoodie"
+Validated with regression checks
 ```
 
-**See it in action:** Visit the [NOVA storefront demo](https://carcarah.vercel.app/storefront?q=moletom%20canguru%20preto&autosearch=1) before and after Carcarah's fix.
+The storefront shown in the demo uses the same search engine before and after the approved rule is applied.
 
----
+## Live demo
 
-## How It Works
+- **Dashboard:** https://carcarah.vercel.app
+- **NOVA storefront:** https://carcarah.vercel.app/storefront
+- **Demo video:** https://youtu.be/oS5YGFwUD4w
 
-### 1. Detect Revenue Leaks
+Try the complete flow:
+1. Open the dashboard
+2. Select the search leak
+3. Investigate with Carcarah
+4. Review the diagnosis
+5. Approve the proposed rule
+6. Validate the result
+7. Open the storefront and compare the search outcome
 
-A deterministic analyzer processes search events and identifies queries with:
-- High search volume
-- Low conversion rates
-- Estimated revenue opportunity
+## How Carcarah works
 
-**Formula:**
-```
-Opportunity = searches × (baseline_cvr - current_cvr) × avg_order_value
-```
+### 1. Deterministic leak detection
 
-### 2. Investigate with AI
+Carcarah continuously analyzes search analytics and identifies queries with:
+- high search volume,
+- low conversion,
+- missing or weak search results,
+- and estimated revenue opportunity.
 
-When you click "Investigate," Carcarah autonomously:
-- Queries the live storefront
-- Searches the product catalog
-- Tests vocabulary hypotheses
-- Inspects product details
+The detector is deterministic and fully reproducible.
 
-**Tools Used:**
-- `getLeakContext` - Retrieves search metrics
-- `searchStorefront` - Tests current search behavior
-- `searchCatalog` - Explores catalog vocabulary
-- `getProductDetails` - Validates products exist
+### 2. Agentic investigation
 
-**No guessing.** Every recommendation is grounded in real data.
+Once a leak is detected, an AI agent begins a real investigation.
 
-### 3. Propose Safe Changes
+The agent uses **read-only tools:**
+- `getLeakContext`
+- `searchStorefront`
+- `searchCatalog`
+- `getProductDetails`
 
-Carcarah generates a **SearchActionProposal** with:
-- Source term (user vocabulary)
-- Target terms (catalog vocabulary)
-- Confidence score
-- Risk assessment (low/medium/high)
-- Rationale
+It does not receive the answer in advance.
 
-**Example:**
+It must explore the storefront, generate vocabulary hypotheses, inspect products, and produce a grounded diagnosis based on actual tool execution.
+
+### 3. Safe proposal generation
+
+The agent outputs a structured `SearchActionProposal` containing:
+- source term,
+- target terms,
+- confidence,
+- risk level,
+- rationale,
+- and reversibility.
+
+Example:
 ```json
 {
   "type": "synonym_rule",
@@ -99,42 +118,34 @@ Carcarah generates a **SearchActionProposal** with:
   "targets": ["hoodie"],
   "confidence": 0.92,
   "risk": "low",
-  "reversible": true,
-  "rationale": "Catalog uses 'hoodie' vocabulary; users search 'canguru'"
+  "reversible": true
 }
 ```
 
-### 4. Human Approval Required
+### 4. Human approval
 
-**Nothing changes without your approval.**
+No executable action happens automatically.
 
-- Low-risk: Apply directly
-- Medium-risk: Review and approve
-- High-risk: Blocked by policy
+Every proposal requires **explicit human approval.**
 
-Every action is cryptographically signed to prevent tampering.
+Approvals are cryptographically signed and bound to the investigated proposal, preventing client-side tampering.
 
-### 5. Validate Before/After
+### 5. Validation and regression checks
 
-Carcarah automatically:
-- Applies the rule in an **isolated sandbox**
-- Re-runs the original query
-- Measures result improvement
-- Checks healthy queries for regressions
+After approval, Carcarah applies the rule in an isolated demo environment, re-runs the original search, measures the improvement, and checks healthy queries for regressions.
 
-**Validation trace:**
+Validation trace:
 ```
-✓ Rule applied in sandbox
-✓ Query re-tested: 0 → 2 products
-✓ No regressions detected (6 queries checked)
-✓ Change validated successfully
+✓ Rule applied
+✓ Query re-tested
+✓ Results measured
+✓ Regression checks passed
+✓ Change validated
 ```
 
-### 6. Revert Anytime
+### 6. Revert
 
-Made a mistake? Click "Revert" to restore original behavior instantly.
-
----
+Every applied rule can be reverted immediately, restoring the original storefront behavior.
 
 ## Architecture
 
@@ -142,208 +153,177 @@ Made a mistake? Click "Revert" to restore original behavior instantly.
 flowchart TD
     Events[Search Events] --> Detect[Leak Detector]
     Catalog[Product Catalog] --> Detect
+    
     Detect --> Dashboard[Revenue Opportunities]
     
     Dashboard --> Investigate[AI Investigation Agent]
-    Investigate --> Tools[Read-Only Tools]
-    Tools --> Proposal[Signed Proposal]
     
-    Proposal --> Approval{Human Approval?}
-    Approval -->|No| Stop[No Change]
-    Approval -->|Yes| Apply[Apply in Sandbox]
+    Investigate --> Context[getLeakContext]
+    Investigate --> Storefront[searchStorefront]
+    Investigate --> Search[searchCatalog]
+    Investigate --> Product[getProductDetails]
     
-    Apply --> Validate[Validate & Check Regressions]
-    Validate --> Results[Measured Before/After]
+    Context --> Evidence[Grounded Evidence]
+    Storefront --> Evidence
+    Search --> Evidence
+    Product --> Evidence
     
-    Apply --> Revert[Revert Option]
+    Evidence --> Proposal[SearchActionProposal]
+    
+    Proposal --> Approval{Human Approval}
+    
+    Approval -->|Reject| Stop[No Change]
+    Approval -->|Approve| Apply[Apply Search Rule]
+    
+    Apply --> Validate[Validate Before / After]
+    Validate --> Results[Measured Impact]
+    
+    Apply --> Revert[Revert]
 ```
 
-### Tech Stack
+## Tech stack
 
-- **Framework:** Next.js 16 + React 19
-- **AI:** OpenAI GPT-4o with Vercel AI SDK
-- **Runtime:** Tool calling with structured output (Zod)
-- **Styling:** CSS Modules + Motion
-- **Testing:** Vitest
-- **Type Safety:** TypeScript
+### Application
+- Next.js 16
+- React 19
+- TypeScript
+- CSS Modules
+- Motion
 
-### Key Design Principles
+### AI
+- Vercel AI SDK
+- OpenAI Responses API
+- GPT-4o
+- Zod structured output
+- Tool calling
 
-1. **Separation of Concerns**
-   - Detect (deterministic) ≠ Investigate (agentic) ≠ Act (controlled)
+### Quality
+- Vitest
+- ESLint
+- TypeScript
+- Next.js production build
 
-2. **Read vs. Write**
-   - Investigation tools: read-only
-   - Act tools: single controlled write operation
-   - No direct catalog/database modifications
+## Why this is an AI agent
 
-3. **Grounding**
-   - Every recommendation backed by tool results
-   - No hallucinated products or rules
+The detector itself is deterministic.
 
-4. **Safety**
-   - Signed proposals prevent tampering
-   - Risk assessment on every action
-   - Automatic regression detection
-   - Sandbox-only changes (demo)
+The **investigation is autonomous.**
 
-5. **Human in the Loop**
-   - Explicit approval required
-   - Full transparency of agent reasoning
-   - Tool execution trace visible
+Carcarah must:
+- inspect analytics,
+- test the current search behavior,
+- generate vocabulary hypotheses,
+- explore the catalog,
+- inspect products,
+- produce a grounded diagnosis,
+- and propose a safe action.
 
----
+The interface displays only real backend tool executions, not a pre-scripted animation.
 
-## Running Locally
+## Running locally
 
-### Prerequisites
-
-- Node.js 22+ and npm
-- OpenAI API key (for AI investigation)
+### Requirements
+- Node.js 22+
+- npm
+- OpenAI API key
 
 ### Setup
 
 ```bash
-# Install dependencies
+git clone https://github.com/guicaettano/carcarah.git
+cd carcarah
+
 npm install
 
-# Configure environment
 cp .env.example .env.local
-# Add OPENAI_API_KEY to .env.local
+```
 
-# Start development server
+Configure:
+```env
+OPENAI_API_KEY=your_key_here
+CARCARAH_APPROVAL_SECRET=optional_secret
+```
+
+Start the app:
+```bash
 npm run dev
 ```
 
-Visit `http://localhost:3000`
+Open:
+```
+http://localhost:3000
+```
 
-### Quality Checks
-
+Quality checks:
 ```bash
-# Run linter
-npm run lint
-
-# Run tests
 npm test
-
-# Build for production
+npm run lint
 npm run build
 ```
 
-**All checks must pass** ✅
-
----
-
-## Project Structure
+## Project structure
 
 ```
-carcarah/
-├── src/
-│   ├── app/                    # Next.js app router
-│   │   ├── api/
-│   │   │   ├── investigate/    # Agent investigation endpoint
-│   │   │   ├── resolve/        # Apply/revert actions endpoint
-│   │   │   └── storefront/     # Demo storefront API
-│   │   ├── leaks/[query]/      # Leak detail pages
-│   │   └── storefront/         # NOVA storefront demo
-│   │
-│   ├── lib/
-│   │   ├── search-analysis/    # Deterministic leak detection
-│   │   ├── investigation-agent/ # AI agent with tools
-│   │   ├── search-actions/     # Act boundary (apply/revert)
-│   │   ├── commerce-search/    # Search engine simulator
-│   │   └── storefront-demo/    # Storefront session management
-│   │
-│   └── components/             # React components
+src/
+├── app/
+│   ├── api/
+│   │   ├── investigate/
+│   │   ├── resolve/
+│   │   └── storefront/
+│   ├── leaks/
+│   └── storefront/
 │
-├── data/
-│   ├── products.json           # Simulated catalog
-│   └── search-events.json      # Simulated analytics
+├── lib/
+│   ├── search-analysis/
+│   ├── investigation-agent/
+│   ├── search-actions/
+│   ├── commerce-search/
+│   └── storefront-demo/
 │
-└── tests/                      # Unit tests
+└── components/
+
+data/
+├── products.json
+└── search-events.json
 ```
 
----
+## Current scope
 
-## Demo Scenario
+This hackathon version intentionally focuses on the complete autonomous decision loop.
 
-The demo simulates a real-world search problem:
+**Included:**
+- deterministic leak detection,
+- AI investigation,
+- grounded tool execution,
+- structured proposals,
+- signed approvals,
+- controlled search actions,
+- validation,
+- regression checks,
+- revert,
+- and the NOVA storefront demo.
 
-### The Leak
-
-**Query:** "moletom canguru preto"  
-**Problem:** Vocabulary mismatch (user says "canguru," catalog says "hoodie")  
-**Impact:** 187 searches, 0 purchases, ~R$ 8,400/month lost
-
-### The Fix
-
-1. Navigate to dashboard
-2. Click **"Ver problema na loja ↗"** → see 0 results
-3. Return and click **"Investigar com Carcarah"**
-4. Watch agent use tools to diagnose the issue
-5. Review proposal: `canguru → hoodie`
-6. Click **"Aprovar e aplicar no sandbox"**
-7. See validation: 0 → 2 products found
-8. Click **"Ver resultado na loja →"** → see products!
-9. (Optional) Click **"Reverter alteração"** → back to 0
-
----
-
-## What Carcarah Does NOT Do
-
-To maintain scope and stability for this hackathon submission:
-
-❌ Does not connect to real e-commerce platforms (Shopify, VTEX, etc.)  
-❌ Does not modify production catalogs or search engines  
-❌ Does not use RAG, embeddings, or vector databases  
-❌ Does not include authentication or multi-tenancy  
-❌ Does not persist changes beyond the demo session
-
-**This is intentional.** Carcarah demonstrates the core autonomous loop with real AI reasoning, safe controls, and measurable validation — without the complexity of production integrations.
-
----
-
-## Future Roadmap
-
-- [ ] Real analytics integrations (Google Analytics, Mixpanel)
-- [ ] E-commerce platform connectors (Shopify, VTEX, WooCommerce)
-- [ ] Multi-agent orchestration (product, inventory, pricing agents)
-- [ ] A/B testing framework for rule deployment
-- [ ] LLM-agnostic architecture (Claude, Gemini, Llama)
-- [ ] Enterprise authentication and multi-tenant support
-- [ ] Embeddings + semantic search for better rule discovery
-
----
+**Not included:**
+- production platform integrations,
+- authentication,
+- persistent multi-tenant infrastructure,
+- real catalog modification,
+- automatic deployment to production search engines.
 
 ## Disclaimer
 
-**This is a hackathon demo.**
+This is a hackathon demo.
 
-- All data is simulated
-- GMV estimates are for demonstration only
-- Applied rules exist only in the demo sandbox
-- No real revenue is recovered
-- Investigation requires OpenAI API access
+All data is synthetic.
 
-For production use, integrate with real analytics, catalogs, and search infrastructure.
+GMV values represent estimated revenue opportunities.
 
----
+Search rules affect only the isolated demo environment for the current session.
 
-## License
-
-MIT
+No production e-commerce system is modified.
 
 ---
 
-## Team
+Built for the **Agents for Commerce** hackathon by **Guilherme da Mata**.
 
-Built for [Hackathon Name] by [Your Name/Team]
-
-**Questions?** Open an issue or reach out at [contact]
-
----
-
-**Ready to see it in action?**  
-👉 [Try the live demo](https://carcarah.vercel.app)  
-📹 [Watch the video](#)  
-💻 [Explore the code](https://github.com/your-repo/carcarah)
+Carcarah helps e-commerce teams find the searches that are quietly losing sales.
