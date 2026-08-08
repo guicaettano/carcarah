@@ -10,6 +10,6 @@ export const productImages: Record<string, string> = {
   prod_012: "/calca-alfaiataria.png", // Calça Alfaiataria Preta Feminina
 
   // Jaquetas
-  prod_013: "/jaqueta jeans.png", // Jaqueta Jeans Oversized Azul
+  prod_013: "/jaqueta-jeans.png", // Jaqueta Jeans Oversized Azul
   prod_015: "/jaqueta-puffer.png", // Jaqueta Puffer Bege Unissex
 };
